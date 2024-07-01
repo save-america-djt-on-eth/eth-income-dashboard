@@ -15,8 +15,6 @@ document.addEventListener("DOMContentLoaded", function () {
         .catch(error => console.error("Error fetching data: ", error));
 });
 
-import { enUS } from 'date-fns/locale'; // Import enUS from date-fns
-
 function updateChart(labels, supplyChange, contractBalance) {
     const ctx = document.getElementById('myChart').getContext('2d');
     const chart = new Chart(ctx, {
@@ -43,11 +41,15 @@ function updateChart(labels, supplyChange, contractBalance) {
                 x: {
                     type: 'time',
                     time: {
-                        unit: 'day'
+                        unit: 'day',
+                        tooltipFormat: 'MM/dd/yyyy',
+                        displayFormats: {
+                            day: 'MM/dd/yyyy'
+                        }
                     },
                     adapters: {
                         date: {
-                            locale: enUS // Use the imported enUS locale
+                            locale: dateFns // Use the global date-fns locale
                         }
                     }
                 }
