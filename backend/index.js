@@ -34,6 +34,7 @@ app.get('/api/data', async (req, res) => {
 
         // Calculate the supply change over the 7 days
         const supplyChange = (ethBalance - pastEthBalance).toFixed(8);
+        const supplyChangeArray = Array(labels.length).fill(parseFloat(supplyChange));
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -51,7 +52,7 @@ app.get('/api/data', async (req, res) => {
             djt: djtData,
             nft: nftData,
             other: otherData,
-            supplyChange: Array(labels.length).fill(supplyChange),
+            supplyChange: supplyChangeArray,
             currentEthTotal
         });
     } catch (error) {
