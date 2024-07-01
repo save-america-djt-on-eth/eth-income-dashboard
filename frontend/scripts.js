@@ -54,7 +54,7 @@ function updateChart(labels, supplyChange, contractBalance) {
                     },
                     adapters: {
                         date: {
-                            locale: window.dateFnsLocale // Use the global date-fns locale
+                            locale: window.dateFnsLocale // Ensure the locale is correctly referenced
                         }
                     }
                 }
