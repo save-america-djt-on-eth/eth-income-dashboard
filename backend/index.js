@@ -2,20 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { ethers } = require('ethers');
-const axios = require('axios');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Enable CORS for all routes
 app.use(cors());
-app.use(express.json());
-
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running on port ${port}`);
-});
 
 const infuraApiKey = process.env.INFURA_API_KEY;
-const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${infuraApiKey}`);
+
+app.use(express.json());
 
 app.get('/api/data', async (req, res) => {
     const { timeFrame, simulate } = req.query;
@@ -39,23 +35,26 @@ app.get('/api/data', async (req, res) => {
         const pastEthBalance = parseFloat(ethers.formatEther(pastBalance));
 
         // Calculate the supply change over the 7 days
-        const supplyChange = [ethBalance - pastEthBalance];
-
-        // Fetch internal transactions from etherscan
-        const transactions = await axios.get(`https://api.etherscan.io/api?module=account&action=txlistinternal&address=${contractAddress}&startblock=${sevenDaysAgoBlock}&endblock=${currentBlock}&sort=asc&apikey=${etherscanApiKey}`);
-        
-        let totalReceived = 0;
-        transactions.data.result.forEach(tx => {
-            if (tx.to.toLowerCase() === address.toLowerCase()) {
-                totalReceived += parseFloat(ethers.formatEther(tx.value));
+        const supplyChange = [];
+        for (let i = 0; i <= 7; i++) {
+            const blockNumber = currentBlock - (i * blocksPerDay);
+            const balance = await provider.getBalance(address, blockNumber);
+            const ethBalance = parseFloat(ethers.formatEther(balance));
+            if (i > 0) {
+                supplyChange.push(ethBalance - supplyChange[supplyChange.length - 1]);
+            } else {
+                supplyChange.push(ethBalance);
             }
-        });
+        }
+
+        // Fetch data from the smart contract address
+        const contractTransactions = await provider.getBalance(contractAddress);
+        const contractBalance = parseFloat(ethers.formatEther(contractTransactions));
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
         const nftData = generateRandomData(labels.length);
         const otherData = generateRandomData(labels.length);
-        const receivedData = generateReceivedData(totalReceived, labels.length);
 
         if (simulate) {
             // Simulation logic
@@ -69,7 +68,7 @@ app.get('/api/data', async (req, res) => {
             nft: nftData,
             other: otherData,
             supplyChange,
-            receivedData,
+            contractBalance,
             currentEthTotal
         });
     } catch (error) {
@@ -79,10 +78,10 @@ app.get('/api/data', async (req, res) => {
 
 function generateTimeLabels(timeFrame) {
     const labels = [];
-    const now = new Date();
+    const today = new Date();
     for (let i = 6; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(now.getDate() - i);
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
         labels.push(date.toISOString().split('T')[0]);
     }
     return labels;
@@ -92,10 +91,6 @@ function generateRandomData(length) {
     return Array.from({ length }, () => Math.floor(Math.random() * 100));
 }
 
-function generateReceivedData(totalReceived, length) {
-    return Array.from({ length }, () => totalReceived / length);
-}
-
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port}`);
 });
