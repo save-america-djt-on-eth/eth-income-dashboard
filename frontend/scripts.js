@@ -42,6 +42,11 @@ function updateChart(labels, supplyChange, contractBalance) {
                     type: 'time',
                     time: {
                         unit: 'day'
+                    },
+                    adapters: {
+                        date: {
+                            locale: enUS
+                        }
                     }
                 }
             }
