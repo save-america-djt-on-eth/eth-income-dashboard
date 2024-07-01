@@ -3,7 +3,6 @@ const express = require('express');
 const { ethers } = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
-
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port}`);
 });
@@ -34,7 +33,7 @@ app.get('/api/data', async (req, res) => {
         const pastEthBalance = ethers.formatEther(pastBalance);
 
         // Calculate the supply change over the 7 days
-        const supplyChange = ethBalance - pastEthBalance;
+        const supplyChange = (ethBalance - pastEthBalance).toFixed(8);
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -52,7 +51,7 @@ app.get('/api/data', async (req, res) => {
             djt: djtData,
             nft: nftData,
             other: otherData,
-            supplyChange,
+            supplyChange: Array(labels.length).fill(supplyChange),
             currentEthTotal
         });
     } catch (error) {
@@ -68,8 +67,6 @@ function generateRandomData(length) {
     return Array.from({ length }, () => Math.floor(Math.random() * 100));
 }
 
-function calculateSupplyChange(djtData, nftData, otherData) {
-    return djtData.reduce((acc, val) => acc + val, 0) +
-           nftData.reduce((acc, val) => acc + val, 0) +
-           otherData.reduce((acc, val) => acc + val, 0);
-}
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
