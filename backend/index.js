@@ -32,7 +32,7 @@ app.get('/api/data', async (req, res) => {
         const blocksPerDay = 6500;
 
         const supplyChange = [];
-        for (let i = 7; i >= 1; i--) {
+        for (let i = 7; i >= 0; i--) {
             const blockNumber = currentBlock - (i * blocksPerDay);
             const balance = await provider.getBalance(address, blockNumber);
             const ethBalance = parseFloat(ethers.formatEther(balance));
