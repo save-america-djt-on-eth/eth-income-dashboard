@@ -15,7 +15,7 @@ app.get('/api/data', async (req, res) => {
 
     try {
         const balance = await provider.getBalance(address);
-        const ethBalance = ethers.utils.formatEther(balance);
+        const ethBalance = ethers.formatEther(balance);
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
