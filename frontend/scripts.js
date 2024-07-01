@@ -4,17 +4,13 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(data => {
             console.log("API Data: ", data);
             
-            // Reverse labels and supplyChange to ensure the correct chronological order
-            data.labels.reverse();
-            data.supplyChange.reverse();
-            
             // Update the chart
             updateChart(data.labels, data.supplyChange, data.contractBalance);
 
             // Update the ETH values
             document.getElementById("total-eth").innerText = data.currentEthTotal.toFixed(4);
-            document.getElementById("eth-generated-djt").innerText = data.contractBalance.toFixed(4);
-            const percentage = ((data.contractBalance / data.currentEthTotal) * 100).toFixed(0);
+            document.getElementById("eth-generated-djt").innerText = parseFloat(data.contractBalance).toFixed(4);
+            const percentage = ((parseFloat(data.contractBalance) / data.currentEthTotal) * 100).toFixed(0);
             document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
         .catch(error => console.error("Error fetching data: ", error));
