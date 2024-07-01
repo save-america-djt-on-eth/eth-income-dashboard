@@ -14,6 +14,6 @@
     "axios": "^1.7.2",
     "ethers": "^6.13.1",
     "express": "^4.19.2",
-    "dotenv": "^16.0.0"  // Add dotenv if not already included
+    "dotenv": "^16.0.0" 
   }
 }
