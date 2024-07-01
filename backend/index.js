@@ -51,8 +51,6 @@ app.get('/api/data', async (req, res) => {
 
         // Fetch internal transactions from the contract address to the given address using Etherscan API
         const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
-        const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(tx.value), 0);
-        const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
         const contractBalance = internalTransactions.reduce((total, tx) => {
             const value = tx.value.toString(); // Ensure value is a string
             const integerPart = value.slice(0, -18) || '0'; // Get the integer part, default to '0' if empty
