@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(response => response.json())
         .then(data => {
             console.log("API Data: ", data);
+
             // Reverse the data arrays for correct chronological order
             const reversedLabels = data.labels.reverse();
             const reversedSupplyChange = data.supplyChange.reverse();
