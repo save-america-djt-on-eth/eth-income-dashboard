@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 labels: data.labels,
                 datasets: [{
                     label: 'Supply Change',
-                    data: Array(data.labels.length).fill(data.supplyChange), // Use the supply change data
+                    data: data.djt, // Assuming djtData represents the supply change over time
                     borderColor: 'rgba(75, 192, 192, 1)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     fill: true,
