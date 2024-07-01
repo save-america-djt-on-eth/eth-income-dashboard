@@ -1,8 +1,12 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    const response = await fetch('http://5.161.44.208:3000/api/data?timeFrame=7d&simulate=false');
-    const data = await response.json();
-    createChart(data);
-    displayTotalEthSupply(data.currentEthTotal);
+    try {
+        const response = await fetch('http://5.161.44.208:3000/api/data?timeFrame=7d&simulate=false');
+        const data = await response.json();
+        createChart(data);
+        displayTotalEthSupply(data.currentEthTotal);
+    } catch (error) {
+        console.error("Error fetching data: ", error);
+    }
 });
 
 function createChart(data) {
