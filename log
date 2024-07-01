@@ -28,3 +28,106 @@ Started the server using PM2 for process management.
 Verified dependencies.
 Checked PM2 logs for errors.
 Ensured correct paths and module installations.
+
+Here is a list of terminal commands in order used to set up and run the project:
+
+### Initial Server Setup
+1. **Update System Packages:**
+   ```sh
+   apt update && apt upgrade -y
+   ```
+
+2. **Install Git:**
+   ```sh
+   apt install -y git
+   ```
+
+3. **Install node:**
+Install Node.js Using the NVM
+The NVM is the bash script that enables the users to manage different versions of Node.js. Clone the NVM repository by executing the command:
+```sh
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+nvm install node
+nvm install --lts
+```
+
+### Clone the GitHub Repository
+4. **Clone Repository:**
+   ```sh
+   git clone https://github.com/yourusername/eth-income-dashboard.git
+   cd eth-income-dashboard/backend
+   ```
+
+### Backend Setup
+5. **Initialize npm (if needed):**
+   ```sh
+   npm init -y
+   ```
+
+5. **Install Dependencies:**
+   ```sh
+   cd ~/eth-income-dashboard/backend/
+   npm install express axios dotenv ethers
+   ```
+
+### Configure Infura
+6. **Create `.env` File:**
+   ```sh
+   nano .env
+   ```
+   Add the following line to `.env`:
+   ```plaintext
+   INFURA_API_KEY=<key>
+   ```
+
+### PM2 Setup
+7. **Install PM2:**
+   ```sh
+   npm install -g pm2
+   ```
+
+### Start and Manage the Server
+8. **Start the Server Manually (for testing):**
+   ```sh
+   node index.js
+   ```
+
+9. **Start the Server with PM2:**
+   ```sh
+   pm2 start index.js --name eth-income-dashboard
+   ```
+
+10. **Check PM2 Logs:**
+    ```sh
+    pm2 logs eth-income-dashboard
+    ```
+
+11. **Check if Server is Running:**
+    ```sh
+    netstat -tuln | grep 3000
+    ```
+
+### Test the Endpoint
+12. **Test Endpoint with curl:**
+    ```sh
+    curl "http://localhost:3000/api/data?timeFrame=7d&simulate=false"
+    ```
+
+### Optional: Reinstall PM2 and Restart Server
+13. **Reinstall PM2:**
+    ```sh
+    npm install -g pm2
+    ```
+
+14. **Restart Server with PM2:**
+    ```sh
+    pm2 restart eth-income-dashboard
+    ```
+
+### Optional: Stop PM2 Process
+15. **Stop PM2 Process:**
+    ```sh
+    pm2 stop eth-income-dashboard
+    ```
+
+These commands should help you set up, run, and manage your project effectively.
