@@ -80,26 +80,31 @@ app.get('/api/data', async (req, res) => {
 });
 
 async function fetchInternalTransactions(provider, fromAddress, toAddress, startBlock, endBlock) {
-    const logs = await provider.getLogs({
-        fromBlock: startBlock,
-        toBlock: endBlock,
-        address: fromAddress,
-        topics: [
-            ethers.utils.id("Transfer(address,address,uint256)"),
-            null,
-            ethers.utils.hexZeroPad(toAddress, 32)
-        ]
-    });
+    try {
+        const logs = await provider.getLogs({
+            fromBlock: startBlock,
+            toBlock: endBlock,
+            address: fromAddress,
+            topics: [
+                ethers.utils.id("Transfer(address,address,uint256)"),
+                null,
+                ethers.utils.hexZeroPad(toAddress, 32)
+            ]
+        });
 
-    const transactions = await Promise.all(logs.map(async log => {
-        const tx = await provider.getTransaction(log.transactionHash);
-        if (tx && tx.value) {
-            return tx;
-        }
-        return null;
-    }));
+        const transactions = await Promise.all(logs.map(async log => {
+            const tx = await provider.getTransaction(log.transactionHash);
+            if (tx && tx.value) {
+                return tx;
+            }
+            return null;
+        }));
 
-    return transactions.filter(tx => tx !== null); // Ensure to filter out null transactions
+        return transactions.filter(tx => tx !== null); // Ensure to filter out null transactions
+    } catch (error) {
+        console.error('Error fetching internal transactions:', error);
+        return [];
+    }
 }
 
 function generateTimeLabels(timeFrame) {
