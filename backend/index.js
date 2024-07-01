@@ -42,11 +42,13 @@ app.get('/api/data', async (req, res) => {
             const blockNumber = currentBlock - (i * blocksPerDay);
             const balance = await provider.getBalance(address, blockNumber);
             const ethBalance = parseFloat(ethers.formatEther(balance));
-            if (i > 0) {
-                supplyChange.push(ethBalance - supplyChange[supplyChange.length - 1]);
-            } else {
-                supplyChange.push(ethBalance);
-            }
+            supplyChange.push(ethBalance);
+        }
+
+        // Adjust supplyChange to reflect the correct differences
+        const adjustedSupplyChange = [supplyChange[0]];
+        for (let i = 1; i < supplyChange.length; i++) {
+            adjustedSupplyChange.push(supplyChange[i] - supplyChange[i - 1]);
         }
 
         // Fetch internal transactions from the contract address to the given address using Etherscan API
@@ -57,11 +59,10 @@ app.get('/api/data', async (req, res) => {
             const decimalPart = value.slice(-18).padStart(18, '0'); // Get the decimal part, pad with zeros if necessary
             const formattedValue = parseFloat(`${integerPart}.${decimalPart}`); // Combine parts and convert to float
             return total + formattedValue;
-        }, 0).toFixed(4); // Limit to four decimal places
-
+        }, 0).toFixed(4); // Limit to three decimal places
+        
         // Convert contractBalance to a float for further processing
         const finalContractBalance = parseFloat(contractBalance);
-
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
         const nftData = generateRandomData(labels.length);
@@ -76,8 +77,8 @@ app.get('/api/data', async (req, res) => {
             djt: djtData,
             nft: nftData,
             other: otherData,
-            supplyChange,
-            contractBalance: finalContractBalance,
+            supplyChange: adjustedSupplyChange,
+            contractBalance,
             currentEthTotal: ethBalance
         };
 
