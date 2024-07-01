@@ -4,10 +4,7 @@ const { ethers } = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Use environment variables
 const infuraApiKey = process.env.INFURA_API_KEY;
-
-// Create an ethers provider
 const provider = new ethers.providers.InfuraProvider('mainnet', infuraApiKey);
 
 app.use(express.json());
