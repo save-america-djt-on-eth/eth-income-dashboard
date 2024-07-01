@@ -61,8 +61,18 @@ app.get('/api/data', async (req, res) => {
 });
 
 function generateTimeLabels(timeFrame) {
-    return ['2024-06-01', '2024-06-02', '2024-06-03'];
+    const currentDate = new Date();
+    const labels = [];
+
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(currentDate);
+        date.setDate(currentDate.getDate() - i);
+        labels.unshift(date.toISOString().split('T')[0]);
+    }
+
+    return labels;
 }
+
 
 function generateRandomData(length) {
     return Array.from({ length }, () => Math.floor(Math.random() * 100));
