@@ -39,7 +39,11 @@
                 .then(data => {
                     console.log("API Data: ", data);
                     // Update the chart
-                    updateChart(data.labels.reverse(), data.supplyChange.reverse(), data.contractBalance.reverse());
+                    updateChart(
+                        data.labels.reverse(),
+                        data.supplyChange.reverse(),
+                        data.contractBalance.reverse()
+                    );
 
                     // Update the ETH values
                     document.getElementById("total-eth").innerText = data.currentEthTotal.toFixed(4);
@@ -84,3 +88,9 @@
                             }
                         }
                     }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
