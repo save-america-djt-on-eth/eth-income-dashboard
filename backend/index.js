@@ -14,8 +14,23 @@ app.get('/api/data', async (req, res) => {
     const address = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
 
     try {
-        const balance = await provider.getBalance(address);
-        const ethBalance = ethers.formatEther(balance);
+        // Get the current balance
+        const currentBalance = await provider.getBalance(address);
+        const ethBalance = ethers.formatEther(currentBalance);
+
+        // Calculate the timestamp for 7 days ago
+        const currentTime = Math.floor(Date.now() / 1000);
+        const sevenDaysAgo = currentTime - (7 * 24 * 60 * 60);
+
+        // Get the block number from 7 days ago
+        const blockSevenDaysAgo = await provider.getBlockNumber(sevenDaysAgo);
+
+        // Get the balance from 7 days ago
+        const pastBalance = await provider.getBalance(address, blockSevenDaysAgo);
+        const pastEthBalance = ethers.formatEther(pastBalance);
+
+        // Calculate the supply change over the 7 days
+        const supplyChange = ethBalance - pastEthBalance;
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -26,7 +41,6 @@ app.get('/api/data', async (req, res) => {
             // Simulation logic
         }
 
-        const supplyChange = calculateSupplyChange(djtData, nftData, otherData);
         const currentEthTotal = ethBalance;
 
         res.json({
