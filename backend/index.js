@@ -1,8 +1,12 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { ethers } = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Enable CORS for all routes
+app.use(cors());
 
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port}`);
@@ -67,3 +71,7 @@ function generateTimeLabels(timeFrame) {
 function generateRandomData(length) {
     return Array.from({ length }, () => Math.floor(Math.random() * 100));
 }
+
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
