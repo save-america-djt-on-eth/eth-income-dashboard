@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 module.exports = {
   apps: [
     {
@@ -7,7 +9,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        INFURA_API_KEY: 'your_infura_api_key'
+        INFURA_API_KEY: process.env.INFURA_API_KEY
       }
     },
     {
