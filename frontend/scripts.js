@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async function() {
     try {
         // Fetch data from the backend
-        const response = await fetch('http://localhost:3000/api/data?timeFrame=7d&simulate=false');
+        const response = await fetch('http://5.161.44.208:3000/api/data?timeFrame=7d&simulate=false');
         const data = await response.json();
 
         // Update total ETH supply
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 labels: data.labels,
                 datasets: [{
                     label: 'Supply Change',
-                    data: data.djt, // Use the appropriate dataset
+                    data: Array(data.labels.length).fill(data.supplyChange), // Use the supply change data
                     borderColor: 'rgba(75, 192, 192, 1)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     fill: true,
