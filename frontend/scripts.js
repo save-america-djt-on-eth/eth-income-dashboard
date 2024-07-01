@@ -30,7 +30,7 @@ function updateChart(labels, supplyChange, contractBalance) {
                 },
                 {
                     label: 'Contract Balance Over Time',
-                    data: new Array(supplyChange.length).fill(contractBalance),
+                    data: new Array(labels.length).fill(contractBalance),
                     borderColor: 'rgba(255, 99, 132, 1)',
                     fill: false
                 }
