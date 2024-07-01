@@ -52,6 +52,14 @@ app.get('/api/data', async (req, res) => {
         // Fetch internal transactions from the contract address to the given address using Etherscan API
         const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
         const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(tx.value), 0);
+        const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
+        const contractBalance = internalTransactions.reduce((total, tx) => {
+            const value = tx.value.toString(); // Ensure value is a string
+            const integerPart = value.slice(0, -18) || '0'; // Get the integer part, default to '0' if empty
+            const decimalPart = value.slice(-18).padStart(18, '0'); // Get the decimal part, pad with zeros if necessary
+            const formattedValue = parseFloat(`${integerPart}.${decimalPart.slice(0, 3)}`); // Combine parts and convert to float
+            return total + formattedValue;
+        }, 0);
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
