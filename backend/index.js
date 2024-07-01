@@ -91,7 +91,14 @@ async function fetchInternalTransactions(provider, fromAddress, toAddress, start
         ]
     });
 
-    const transactions = await Promise.all(logs.map(log => provider.getTransaction(log.transactionHash)));
+    const transactions = await Promise.all(logs.map(async log => {
+        const tx = await provider.getTransaction(log.transactionHash);
+        if (tx && tx.value) {
+            return tx;
+        }
+        return null;
+    }));
+
     return transactions.filter(tx => tx !== null); // Ensure to filter out null transactions
 }
 
