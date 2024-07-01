@@ -3,6 +3,7 @@ const express = require('express');
 const { ethers } = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
+
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port}`);
 });
@@ -66,7 +67,3 @@ function generateTimeLabels(timeFrame) {
 function generateRandomData(length) {
     return Array.from({ length }, () => Math.floor(Math.random() * 100));
 }
-
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
