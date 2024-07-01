@@ -30,27 +30,13 @@ app.get('/api/data', async (req, res) => {
 
         // Estimate the block number from 7 days ago (approximately 6500 blocks per day)
         const blocksPerDay = 6500;
-		// Mark for removal
-        // const sevenDaysAgoBlock = currentBlock - (7 * blocksPerDay);
 
-        // Mark for removal
-		// Get the balance from 7 days ago
-        // const pastBalance = await provider.getBalance(address, sevenDaysAgoBlock);
-        // const pastEthBalance = parseFloat(ethers.formatEther(pastBalance));
-
-        // Calculate the supply change over the 7 days
         const supplyChange = [];
-        for (let i = 0; i <= 7; i++) {
+        for (let i = 7; i >= 1; i--) {
             const blockNumber = currentBlock - (i * blocksPerDay);
             const balance = await provider.getBalance(address, blockNumber);
             const ethBalance = parseFloat(ethers.formatEther(balance));
             supplyChange.push(ethBalance);
-        }
-
-        // Adjust supplyChange to reflect the correct differences
-        const adjustedSupplyChange = [supplyChange[0]];
-        for (let i = 1; i < supplyChange.length; i++) {
-            adjustedSupplyChange.push(supplyChange[i - 1] - supplyChange[i]);
         }
 
         // Fetch internal transactions from the contract address to the given address using Etherscan API
@@ -79,7 +65,7 @@ app.get('/api/data', async (req, res) => {
             djt: djtData,
             nft: nftData,
             other: otherData,
-            supplyChange: adjustedSupplyChange,
+            supplyChange: supplyChange,
             contractBalance,
             currentEthTotal: currentEthBalance
         };
