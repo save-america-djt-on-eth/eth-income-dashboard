@@ -49,12 +49,7 @@ app.get('/api/data', async (req, res) => {
 
         // Fetch internal transactions from the contract address to the given address
         const internalTransactions = await fetchInternalTransactions(provider, contractAddress, address, sevenDaysAgoBlock, currentBlock);
-        const contractBalance = internalTransactions.reduce((total, tx) => {
-            if (tx && tx.value) {
-                return total + parseFloat(ethers.formatEther(tx.value));
-            }
-            return total;
-        }, 0);
+        const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(ethers.formatEther(tx.value)), 0);
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -85,33 +80,18 @@ app.get('/api/data', async (req, res) => {
 });
 
 async function fetchInternalTransactions(provider, fromAddress, toAddress, startBlock, endBlock) {
-    try {
-        const logs = await provider.getLogs({
-            fromBlock: startBlock,
-            toBlock: endBlock,
-            address: fromAddress,
-            topics: [
-                ethers.utils.id("Transfer(address,address,uint256)"),
-                null,
-                ethers.utils.hexZeroPad(toAddress, 32)
-            ]
-        });
+    const logs = await provider.getLogs({
+        fromBlock: startBlock,
+        toBlock: endBlock,
+        address: fromAddress,
+        topics: [
+            ethers.utils.id("Transfer(address,address,uint256)"),
+            null,
+            ethers.utils.hexZeroPad(toAddress, 32)
+        ]
+    });
 
-        const transactions = [];
-        for (const log of logs) {
-            const transaction = await provider.getTransaction(log.transactionHash);
-            if (transaction) {
-                transactions.push(transaction);
-            } else {
-                console.error(`Transaction not found for hash: ${log.transactionHash}`);
-            }
-        }
-
-        return transactions;
-    } catch (error) {
-        console.error('Error fetching internal transactions:', error);
-        return [];
-    }
+    return logs.map(log => provider.getTransaction(log.transactionHash));
 }
 
 function generateTimeLabels(timeFrame) {
