@@ -15,13 +15,22 @@ function createChart(data) {
         type: 'line',
         data: {
             labels: data.labels,
-            datasets: [{
-                label: 'Supply Change Over Time',
-                data: data.supplyChange,
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-                fill: false
-            }]
+            datasets: [
+                {
+                    label: 'Supply Change Over Time',
+                    data: data.supplyChange,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: false
+                },
+                {
+                    label: 'Total ETH Received',
+                    data: data.receivedData,
+                    borderColor: 'rgba(192, 75, 75, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }
+            ]
         },
         options: {
             scales: {
@@ -34,5 +43,5 @@ function createChart(data) {
 }
 
 function displayTotalEthSupply(totalEth) {
-    document.getElementById('totalEthSupply').innerText = `Total ETH Supply: ${totalEth}`;
+    document.getElementById('totalEthSupply').innerText = `Total ETH Supply: ${totalEth.toFixed(3)}`;
 }
