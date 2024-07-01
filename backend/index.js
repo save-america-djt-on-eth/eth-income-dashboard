@@ -55,10 +55,12 @@ app.get('/api/data', async (req, res) => {
             const value = tx.value.toString(); // Ensure value is a string
             const integerPart = value.slice(0, -18) || '0'; // Get the integer part, default to '0' if empty
             const decimalPart = value.slice(-18).padStart(18, '0'); // Get the decimal part, pad with zeros if necessary
-            const formattedValue = parseFloat(`${integerPart}.${decimalPart.slice(0, 3)}`); // Combine parts and convert to float
+            const formattedValue = parseFloat(`${integerPart}.${decimalPart}`); // Combine parts and convert to float
             return total + formattedValue;
-        }, 0);
-
+        }, 0).toFixed(3); // Limit to three decimal places
+        
+        // Convert contractBalance to a float for further processing
+        const finalContractBalance = parseFloat(contractBalance);
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
         const nftData = generateRandomData(labels.length);
