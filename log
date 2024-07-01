@@ -67,7 +67,7 @@ nvm install --lts
 5. **Install Dependencies:**
    ```sh
    cd ~/eth-income-dashboard/backend/
-   npm install express axios dotenv ethers
+   npm install express axios dotenv ethers cors
    ```
 
 ### Configure Infura
