@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios'); // Add axios for API calls
 const { ethers } = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -9,6 +10,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 
 const infuraApiKey = process.env.INFURA_API_KEY;
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY; // Add Etherscan API key
 const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${infuraApiKey}`);
 
 app.use(express.json());
@@ -47,9 +49,9 @@ app.get('/api/data', async (req, res) => {
             }
         }
 
-        // Fetch internal transactions from the contract address to the given address
-        const internalTransactions = await fetchInternalTransactions(provider, contractAddress, address, sevenDaysAgoBlock, currentBlock);
-        const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(ethers.formatEther(tx.value)), 0);
+        // Fetch internal transactions from the contract address to the given address using Etherscan API
+        const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
+        const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(tx.value), 0);
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -79,30 +81,27 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-async function fetchInternalTransactions(provider, fromAddress, toAddress, startBlock, endBlock) {
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
     try {
-        const logs = await provider.getLogs({
-            fromBlock: startBlock,
-            toBlock: endBlock,
-            address: fromAddress,
-            topics: [
-                ethers.utils.id("Transfer(address,address,uint256)"),
-                null,
-                ethers.utils.hexZeroPad(toAddress, 32)
-            ]
-        });
-
-        const transactions = await Promise.all(logs.map(async log => {
-            const tx = await provider.getTransaction(log.transactionHash);
-            if (tx && tx.value) {
-                return tx;
+        const response = await axios.get(`https://api.etherscan.io/api`, {
+            params: {
+                module: 'account',
+                action: 'txlistinternal',
+                address: toAddress,
+                startblock: 0,
+                endblock: 'latest',
+                sort: 'asc',
+                apikey: etherscanApiKey
             }
-            return null;
-        }));
-
-        return transactions.filter(tx => tx !== null); // Ensure to filter out null transactions
+        });
+        if (response.data.status === "1") {
+            return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
+        } else {
+            console.error('Etherscan API Error:', response.data.message);
+            return [];
+        }
     } catch (error) {
-        console.error('Error fetching internal transactions:', error);
+        console.error('Error fetching internal transactions from Etherscan:', error);
         return [];
     }
 }
