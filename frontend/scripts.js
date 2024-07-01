@@ -3,14 +3,13 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(response => response.json())
         .then(data => {
             console.log("API Data: ", data);
-
-            // Reverse the data arrays for correct chronological order
-            const reversedLabels = data.labels.reverse();
-            const reversedSupplyChange = data.supplyChange.reverse();
-            const reversedContractBalance = new Array(reversedLabels.length).fill(data.contractBalance);
-
+            
+            // Reverse labels and supplyChange to ensure the correct chronological order
+            data.labels.reverse();
+            data.supplyChange.reverse();
+            
             // Update the chart
-            updateChart(reversedLabels, reversedSupplyChange, reversedContractBalance);
+            updateChart(data.labels, data.supplyChange, data.contractBalance);
 
             // Update the ETH values
             document.getElementById("total-eth").innerText = data.currentEthTotal.toFixed(4);
@@ -23,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function updateChart(labels, supplyChange, contractBalance) {
     const ctx = document.getElementById('myChart').getContext('2d');
-    const chart = new Chart(ctx, {
+    new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -36,7 +35,7 @@ function updateChart(labels, supplyChange, contractBalance) {
                 },
                 {
                     label: 'Contract Balance Over Time',
-                    data: contractBalance,
+                    data: new Array(labels.length).fill(contractBalance),
                     borderColor: 'rgba(255, 99, 132, 1)',
                     fill: false
                 }
@@ -45,17 +44,12 @@ function updateChart(labels, supplyChange, contractBalance) {
         options: {
             scales: {
                 x: {
-                    type: 'time',
+                    type: 'category',
                     time: {
                         unit: 'day',
                         tooltipFormat: 'MM/dd/yyyy',
                         displayFormats: {
                             day: 'MM/dd/yyyy'
-                        }
-                    },
-                    adapters: {
-                        date: {
-                            locale: window.dateFnsLocale // Ensure the locale is correctly referenced
                         }
                     }
                 }
