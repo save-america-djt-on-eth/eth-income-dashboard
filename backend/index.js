@@ -100,14 +100,6 @@ async function fetchInternalTransactions(provider, fromAddress, toAddress, start
             return null;
         }));
 
-        transactions.forEach(tx => {
-            if (!tx) {
-                console.error('Null transaction found:', tx);
-            } else if (!tx.value) {
-                console.error('Transaction without value found:', tx);
-            }
-        });
-
         return transactions.filter(tx => tx !== null); // Ensure to filter out null transactions
     } catch (error) {
         console.error('Error fetching internal transactions:', error);
