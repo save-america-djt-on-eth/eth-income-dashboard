@@ -60,18 +60,21 @@ app.get('/api/data', async (req, res) => {
             // Simulation logic
         }
 
-        const currentEthTotal = ethBalance;
-
-        res.json({
+        const response = {
             labels,
             djt: djtData,
             nft: nftData,
             other: otherData,
             supplyChange,
             contractBalance,
-            currentEthTotal
-        });
+            currentEthTotal: ethBalance
+        };
+
+        console.log('API Response:', response); // Log the response
+
+        res.json(response);
     } catch (error) {
+        console.error('Error:', error); // Log the error
         res.status(500).json({ error: error.message });
     }
 });
@@ -88,7 +91,10 @@ async function fetchInternalTransactions(provider, fromAddress, toAddress, start
         ]
     });
 
-    return logs.map(log => provider.getTransaction(log.transactionHash));
+    return Promise.all(logs.map(async (log) => {
+        const tx = await provider.getTransaction(log.transactionHash);
+        return tx;
+    }));
 }
 
 function generateTimeLabels(timeFrame) {
