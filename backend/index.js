@@ -8,10 +8,6 @@ const port = process.env.PORT || 3000;
 // Enable CORS for all routes
 app.use(cors());
 
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running on port ${port}`);
-});
-
 const infuraApiKey = process.env.INFURA_API_KEY;
 const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${infuraApiKey}`);
 
@@ -72,6 +68,6 @@ function generateRandomData(length) {
     return Array.from({ length }, () => Math.floor(Math.random() * 100));
 }
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port}`);
 });
