@@ -49,7 +49,7 @@ app.get('/api/data', async (req, res) => {
 
         // Fetch internal transactions from the contract address to the given address
         const internalTransactions = await fetchInternalTransactions(provider, contractAddress, address, sevenDaysAgoBlock, currentBlock);
-        const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(ethers.formatEther(tx.value)), 0);
+        const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(ethers.formatEther(tx.value || '0')), 0);
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -93,9 +93,13 @@ async function fetchInternalTransactions(provider, fromAddress, toAddress, start
         });
 
         const transactions = await Promise.all(logs.map(async log => {
-            const tx = await provider.getTransaction(log.transactionHash);
-            if (tx && tx.value) {
-                return tx;
+            try {
+                const tx = await provider.getTransaction(log.transactionHash);
+                if (tx && tx.value) {
+                    return tx;
+                }
+            } catch (error) {
+                console.error(`Error fetching transaction for hash ${log.transactionHash}:`, error);
             }
             return null;
         }));
