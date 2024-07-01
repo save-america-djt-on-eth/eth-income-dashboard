@@ -5,7 +5,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 const infuraApiKey = process.env.INFURA_API_KEY;
-const provider = new ethers.providers.InfuraProvider('mainnet', infuraApiKey);
+const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${infuraApiKey}`);
 
 app.use(express.json());
 
