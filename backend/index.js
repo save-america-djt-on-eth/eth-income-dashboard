@@ -23,7 +23,7 @@ app.get('/api/data', async (req, res) => {
     try {
         // Get the current balance
         const currentBalance = await provider.getBalance(address);
-        const ethBalance = parseFloat(ethers.formatEther(currentBalance)).toFixed(4);
+        const ethBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
 
         // Get the current block number
         const currentBlock = await provider.getBlockNumber();
