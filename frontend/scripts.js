@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         createChart(data);
         displayTotalEthSupply(data.currentEthTotal);
     } catch (error) {
-        console.error("Error fetching data: ", error);
+        console.error('Error fetching data: ', error);
     }
 });
 
@@ -34,7 +34,5 @@ function createChart(data) {
 }
 
 function displayTotalEthSupply(totalEth) {
-    const roundedEth = totalEth.toFixed(3);
-    document.getElementById('totalEthSupply').innerText = `Total ETH Supply: ${roundedEth}`;
+    document.getElementById('totalEthSupply').innerText = `Total ETH Supply: ${totalEth}`;
 }
-
