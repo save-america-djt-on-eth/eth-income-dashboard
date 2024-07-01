@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios'); // Add axios for API calls
+const axios = require('axios');
 const { ethers } = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -51,7 +51,13 @@ app.get('/api/data', async (req, res) => {
 
         // Fetch internal transactions from the contract address to the given address using Etherscan API
         const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
-        const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(tx.value), 0);
+        const contractBalance = internalTransactions.reduce((total, tx) => {
+            const value = tx.value;
+            const integerPart = value.slice(0, -18);
+            const decimalPart = value.slice(-18);
+            const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
+            return total + formattedValue;
+        }, 0);
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
