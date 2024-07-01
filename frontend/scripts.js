@@ -34,5 +34,7 @@ function createChart(data) {
 }
 
 function displayTotalEthSupply(totalEth) {
-    document.getElementById('totalEthSupply').innerText = `Total ETH Supply: ${totalEth}`;
+    const roundedEth = totalEth.toFixed(3);
+    document.getElementById('totalEthSupply').innerText = `Total ETH Supply: ${roundedEth}`;
 }
+
