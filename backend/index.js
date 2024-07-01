@@ -67,7 +67,7 @@ app.get('/api/data', async (req, res) => {
             other: otherData,
             supplyChange,
             contractBalance,
-            currentEthTotal
+            currentEthTotal: ethBalance
         };
 
         console.log('API Response:', response); // Log the response
@@ -91,14 +91,8 @@ async function fetchInternalTransactions(provider, fromAddress, toAddress, start
         ]
     });
 
-    return logs.map(log => {
-        try {
-            return provider.getTransaction(log.transactionHash);
-        } catch (err) {
-            console.error('Error fetching transaction:', err);
-            return null; // Return null or a default object in case of an error
-        }
-    }).filter(tx => tx !== null); // Filter out any null values
+    const transactions = await Promise.all(logs.map(log => provider.getTransaction(log.transactionHash)));
+    return transactions.filter(tx => tx !== null); // Ensure to filter out null transactions
 }
 
 function generateTimeLabels(timeFrame) {
