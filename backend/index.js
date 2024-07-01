@@ -23,7 +23,7 @@ app.get('/api/data', async (req, res) => {
     try {
         // Get the current balance
         const currentBalance = await provider.getBalance(address);
-        const ethBalance = parseFloat(ethers.formatEther(currentBalance));
+        const ethBalance = parseFloat(ethers.formatEther(currentBalance)).toFixed(4);
 
         // Get the current block number
         const currentBlock = await provider.getBlockNumber();
@@ -57,7 +57,7 @@ app.get('/api/data', async (req, res) => {
             const decimalPart = value.slice(-18).padStart(18, '0'); // Get the decimal part, pad with zeros if necessary
             const formattedValue = parseFloat(`${integerPart}.${decimalPart}`); // Combine parts and convert to float
             return total + formattedValue;
-        }, 0).toFixed(3); // Limit to three decimal places
+        }, 0).toFixed(4); // Limit to three decimal places
         
         // Convert contractBalance to a float for further processing
         const finalContractBalance = parseFloat(contractBalance);
