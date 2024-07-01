@@ -1,0 +1,30 @@
+1. Set Up Cloud Server:
+Created and logged into a cloud server.
+Updated the server packages.
+
+2. Installed Required Software:
+Installed Node.js, npm, and Git.
+
+3. Cloned the GitHub Repository:
+Cloned the project repository into the server.
+
+4. Backend Setup:
+Navigated to the backend directory.
+Created a package.json with necessary dependencies.
+Installed dependencies (express, axios, dotenv, ethers).
+
+5. Configured Infura:
+Created an Infura account and obtained an API key.
+Added the Infura API key to a .env file in the backend directory.
+
+6. Updated index.js:
+Implemented a server using express and ethers to fetch ETH data from the blockchain.
+
+7. Set Up PM2:
+Installed PM2 globally.
+Started the server using PM2 for process management.
+
+8. Debugging:
+Verified dependencies.
+Checked PM2 logs for errors.
+Ensured correct paths and module installations.
