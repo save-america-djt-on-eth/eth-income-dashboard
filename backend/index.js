@@ -4,6 +4,10 @@ const { ethers } = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on port ${port}`);
+});
+
 const infuraApiKey = process.env.INFURA_API_KEY;
 const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${infuraApiKey}`);
 
@@ -69,7 +73,3 @@ function calculateSupplyChange(djtData, nftData, otherData) {
            nftData.reduce((acc, val) => acc + val, 0) +
            otherData.reduce((acc, val) => acc + val, 0);
 }
-
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
