@@ -23,22 +23,24 @@ app.get('/api/data', async (req, res) => {
     try {
         // Get the current balance
         const currentBalance = await provider.getBalance(address);
-        const ethBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
+        const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
 
         // Get the current block number
         const currentBlock = await provider.getBlockNumber();
 
         // Estimate the block number from 7 days ago (approximately 6500 blocks per day)
         const blocksPerDay = 6500;
-        const sevenDaysAgoBlock = currentBlock - (7 * blocksPerDay);
+		// Mark for removal
+        // const sevenDaysAgoBlock = currentBlock - (7 * blocksPerDay);
 
-        // Get the balance from 7 days ago
-        const pastBalance = await provider.getBalance(address, sevenDaysAgoBlock);
-        const pastEthBalance = parseFloat(ethers.formatEther(pastBalance));
+        // Mark for removal
+		// Get the balance from 7 days ago
+        // const pastBalance = await provider.getBalance(address, sevenDaysAgoBlock);
+        // const pastEthBalance = parseFloat(ethers.formatEther(pastBalance));
 
         // Calculate the supply change over the 7 days
         const supplyChange = [];
-        for (let i = 0; i <= 7; i++) {
+        for (let i = 7; i >= 1; i--) {
             const blockNumber = currentBlock - (i * blocksPerDay);
             const balance = await provider.getBalance(address, blockNumber);
             const ethBalance = parseFloat(ethers.formatEther(balance));
@@ -79,7 +81,7 @@ app.get('/api/data', async (req, res) => {
             other: otherData,
             supplyChange: adjustedSupplyChange,
             contractBalance,
-            currentEthTotal: ethBalance
+            currentEthTotal: currentEthBalance
         };
 
         console.log('API Response:', response); // Log the response
