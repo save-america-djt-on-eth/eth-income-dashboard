@@ -47,9 +47,9 @@ app.get('/api/data', async (req, res) => {
             }
         }
 
-        // Fetch data from the smart contract address
-        const contractTransactions = await provider.getBalance(contractAddress);
-        const contractBalance = parseFloat(ethers.formatEther(contractTransactions));
+        // Fetch internal transactions from the contract address to the given address
+        const internalTransactions = await fetchInternalTransactions(provider, contractAddress, address, sevenDaysAgoBlock, currentBlock);
+        const contractBalance = internalTransactions.reduce((total, tx) => total + parseFloat(ethers.formatEther(tx.value)), 0);
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -75,6 +75,21 @@ app.get('/api/data', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+async function fetchInternalTransactions(provider, fromAddress, toAddress, startBlock, endBlock) {
+    const logs = await provider.getLogs({
+        fromBlock: startBlock,
+        toBlock: endBlock,
+        address: fromAddress,
+        topics: [
+            ethers.utils.id("Transfer(address,address,uint256)"),
+            null,
+            ethers.utils.hexZeroPad(toAddress, 32)
+        ]
+    });
+
+    return logs.map(log => provider.getTransaction(log.transactionHash));
+}
 
 function generateTimeLabels(timeFrame) {
     const labels = [];
