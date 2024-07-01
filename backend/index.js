@@ -19,7 +19,7 @@ app.get('/api/data', async (req, res) => {
     try {
         // Get the current balance
         const currentBalance = await provider.getBalance(address);
-        const ethBalance = ethers.formatEther(currentBalance);
+        const ethBalance = parseFloat(ethers.formatEther(currentBalance));
 
         // Get the current block number
         const currentBlock = await provider.getBlockNumber();
@@ -30,11 +30,10 @@ app.get('/api/data', async (req, res) => {
 
         // Get the balance from 7 days ago
         const pastBalance = await provider.getBalance(address, sevenDaysAgoBlock);
-        const pastEthBalance = ethers.formatEther(pastBalance);
+        const pastEthBalance = parseFloat(ethers.formatEther(pastBalance));
 
         // Calculate the supply change over the 7 days
-        const supplyChange = (ethBalance - pastEthBalance).toFixed(8);
-        const supplyChangeArray = Array(labels.length).fill(parseFloat(supplyChange));
+        const supplyChange = [ethBalance - pastEthBalance];
 
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -52,7 +51,7 @@ app.get('/api/data', async (req, res) => {
             djt: djtData,
             nft: nftData,
             other: otherData,
-            supplyChange: supplyChangeArray,
+            supplyChange,
             currentEthTotal
         });
     } catch (error) {
