@@ -25,7 +25,7 @@ function createChart(data) {
                 },
                 {
                     label: 'Contract Transactions Over Time',
-                    data: data.contractBalance,
+                    data: Array(data.labels.length).fill(data.contractBalance),
                     borderColor: 'rgba(192, 75, 192, 1)',
                     borderWidth: 1,
                     fill: false
