@@ -40,7 +40,7 @@ app.get('/api/data', async (req, res) => {
 
         // Calculate the supply change over the 7 days
         const supplyChange = [];
-        for (let i = 7; i >= 1; i--) {
+        for (let i = 0; i <= 7; i++) {
             const blockNumber = currentBlock - (i * blocksPerDay);
             const balance = await provider.getBalance(address, blockNumber);
             const ethBalance = parseFloat(ethers.formatEther(balance));
@@ -50,7 +50,7 @@ app.get('/api/data', async (req, res) => {
         // Adjust supplyChange to reflect the correct differences
         const adjustedSupplyChange = [supplyChange[0]];
         for (let i = 1; i < supplyChange.length; i++) {
-            adjustedSupplyChange.push(supplyChange[i] - supplyChange[i - 1]);
+            adjustedSupplyChange.push(supplyChange[i - 1] - supplyChange[i]);
         }
 
         // Fetch internal transactions from the contract address to the given address using Etherscan API
