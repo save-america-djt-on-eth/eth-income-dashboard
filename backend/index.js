@@ -91,10 +91,15 @@ async function fetchInternalTransactions(provider, fromAddress, toAddress, start
         ]
     });
 
-    return Promise.all(logs.map(async (log) => {
-        const tx = await provider.getTransaction(log.transactionHash);
-        return tx;
-    }));
+    const transactions = [];
+    for (const log of logs) {
+        const transaction = await provider.getTransaction(log.transactionHash);
+        if (transaction) {
+            transactions.push(transaction);
+        }
+    }
+
+    return transactions;
 }
 
 function generateTimeLabels(timeFrame) {
