@@ -18,15 +18,15 @@ app.get('/api/data', async (req, res) => {
         const currentBalance = await provider.getBalance(address);
         const ethBalance = ethers.formatEther(currentBalance);
 
-        // Calculate the timestamp for 7 days ago
-        const currentTime = Math.floor(Date.now() / 1000);
-        const sevenDaysAgo = currentTime - (7 * 24 * 60 * 60);
+        // Get the current block number
+        const currentBlock = await provider.getBlockNumber();
 
-        // Get the block number from 7 days ago
-        const blockSevenDaysAgo = await provider.getBlockNumber(sevenDaysAgo);
+        // Estimate the block number from 7 days ago (approximately 6500 blocks per day)
+        const blocksPerDay = 6500;
+        const sevenDaysAgoBlock = currentBlock - (7 * blocksPerDay);
 
         // Get the balance from 7 days ago
-        const pastBalance = await provider.getBalance(address, blockSevenDaysAgo);
+        const pastBalance = await provider.getBalance(address, sevenDaysAgoBlock);
         const pastEthBalance = ethers.formatEther(pastBalance);
 
         // Calculate the supply change over the 7 days
