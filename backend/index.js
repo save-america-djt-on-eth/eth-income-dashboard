@@ -92,16 +92,21 @@ async function fetchInternalTransactions(provider, fromAddress, toAddress, start
             ]
         });
 
-        console.log('Logs:', logs); // Log the logs
-
         const transactions = await Promise.all(logs.map(async log => {
             const tx = await provider.getTransaction(log.transactionHash);
-            console.log('Transaction:', tx); // Log each transaction
             if (tx && tx.value) {
                 return tx;
             }
             return null;
         }));
+
+        transactions.forEach(tx => {
+            if (!tx) {
+                console.error('Null transaction found:', tx);
+            } else if (!tx.value) {
+                console.error('Transaction without value found:', tx);
+            }
+        });
 
         return transactions.filter(tx => tx !== null); // Ensure to filter out null transactions
     } catch (error) {
