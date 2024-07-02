@@ -49,7 +49,7 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated) {
                     },
                     adapters: {
                         date: {
-                            locale: dateFns
+                            locale: dateFns // This should now be properly loaded
                         }
                     }
                 }
