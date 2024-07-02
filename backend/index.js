@@ -33,93 +33,102 @@ async function updateCache() {
     const address = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
     const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
 
-    const currentBalance = await provider.getBalance(address);
-    const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
-    const currentBlock = await provider.getBlockNumber();
-    const blocksPerDay = 6500;
-    const blocksPerHour = Math.round(blocksPerDay / 24);
-    const blocksPer12Hours = Math.round(blocksPerDay / 2);
+    try {
+        const currentBalance = await provider.getBalance(address);
+        const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
+        const currentBlock = await provider.getBlockNumber();
+        const blocksPerDay = 6500;
+        const blocksPerHour = Math.round(blocksPerDay / 24);
+        const blocksPer12Hours = Math.round(blocksPerDay / 2);
 
-    // Function to generate data for a given time frame
-    async function generateData(timeFrame) {
-        let days, interval, blocksPerInterval, startDate, endDate;
-        if (timeFrame === '1d') {
-            days = 1;
-            interval = 24; // 24 hours
-            blocksPerInterval = blocksPerHour;
-        } else if (timeFrame === '30d') {
-            days = 30;
-            interval = 30; // 30 days
-            blocksPerInterval = blocksPerDay;
-        } else if (timeFrame === 'custom') {
-            days = 0;
-            interval = 30; // 30 custom intervals
-            startDate = new Date('2024-03-21');
-            endDate = new Date();
-            blocksPerInterval = Math.floor((currentBlock - await provider.getBlockNumber(startDate)) / 30);
-        } else {
-            days = 7;
-            interval = 14; // 7 days with 12-hour intervals
-            blocksPerInterval = blocksPer12Hours;
+        // Function to generate data for a given time frame
+        async function generateData(timeFrame) {
+            let days, interval, blocksPerInterval, startDate, endDate;
+            if (timeFrame === '1d') {
+                days = 1;
+                interval = 24; // 24 hours
+                blocksPerInterval = blocksPerHour;
+            } else if (timeFrame === '30d') {
+                days = 30;
+                interval = 30; // 30 days
+                blocksPerInterval = blocksPerDay;
+            } else if (timeFrame === 'custom') {
+                days = 0;
+                interval = 30; // 30 custom intervals
+                startDate = new Date('2024-03-21');
+                endDate = new Date();
+                blocksPerInterval = Math.floor((currentBlock - await provider.getBlockNumber(startDate)) / 30);
+            } else {
+                days = 7;
+                interval = 14; // 7 days with 12-hour intervals
+                blocksPerInterval = blocksPer12Hours;
+            }
+
+            const supplyChange = [];
+            for (let i = interval; i >= 0; i--) {
+                const blockNumber = currentBlock - (i * blocksPerInterval);
+                try {
+                    const balance = await provider.getBalance(address, blockNumber);
+                    const ethBalance = parseFloat(ethers.formatEther(balance));
+                    supplyChange.push(ethBalance);
+                } catch (error) {
+                    console.error(`Error fetching balance for block ${blockNumber}:`, error);
+                    supplyChange.push(0);
+                }
+            }
+
+            const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
+
+            const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
+
+            const contractBalance = internalTransactions.reduce((total, tx) => {
+                const value = tx.value.toString();
+                const integerPart = value.slice(0, -18) || '0';
+                const decimalPart = value.slice(-18).padStart(18, '0');
+                const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
+                return total + formattedValue;
+            }, 0).toFixed(4);
+
+            const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
+
+            // Compute supplyChange delta
+            const supplyDelta = [];
+            for (let i = 1; i < supplyChange.length; i++) {
+                supplyDelta.push(supplyChange[i] - supplyChange[i - 1]);
+            }
+
+            // Compute cumulativeEthGenerated delta
+            const djtDelta = [];
+            for (let i = 1; i < cumulativeEthGenerated.length; i++) {
+                djtDelta.push(cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]);
+            }
+
+            const djtData = generateRandomData(labels.length);
+            const nftData = generateRandomData(labels.length);
+            const otherData = generateRandomData(labels.length);
+
+            return {
+                labels: labels.slice(1),  // Remove the first label as we now have deltas
+                djt: djtData,
+                nft: nftData,
+                other: otherData,
+                supplyChange: supplyDelta,  // Return the deltas
+                cumulativeEthGenerated: djtDelta,  // Return the deltas
+                contractBalance,
+                currentEthTotal: currentEthBalance
+            };
         }
 
-        const supplyChange = [];
-        for (let i = interval; i >= 0; i--) {
-            const blockNumber = currentBlock - (i * blocksPerInterval);
-            const balance = await provider.getBalance(address, blockNumber);
-            const ethBalance = parseFloat(ethers.formatEther(balance));
-            supplyChange.push(ethBalance);
-        }
+        // Update cache for each time frame
+        cache['1d'] = await generateData('1d');
+        cache['7d'] = await generateData('7d');
+        cache['30d'] = await generateData('30d');
+        cache['custom'] = await generateData('custom');
 
-        const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
-
-        const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
-
-        const contractBalance = internalTransactions.reduce((total, tx) => {
-            const value = tx.value.toString();
-            const integerPart = value.slice(0, -18) || '0';
-            const decimalPart = value.slice(-18).padStart(18, '0');
-            const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
-            return total + formattedValue;
-        }, 0).toFixed(4);
-
-        const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
-
-        // Compute supplyChange delta
-        const supplyDelta = [];
-        for (let i = 1; i < supplyChange.length; i++) {
-            supplyDelta.push(supplyChange[i] - supplyChange[i - 1]);
-        }
-
-        // Compute cumulativeEthGenerated delta
-        const djtDelta = [];
-        for (let i = 1; i < cumulativeEthGenerated.length; i++) {
-            djtDelta.push(cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]);
-        }
-
-        const djtData = generateRandomData(labels.length);
-        const nftData = generateRandomData(labels.length);
-        const otherData = generateRandomData(labels.length);
-
-        return {
-            labels: labels.slice(1),  // Remove the first label as we now have deltas
-            djt: djtData,
-            nft: nftData,
-            other: otherData,
-            supplyChange: supplyDelta,  // Return the deltas
-            cumulativeEthGenerated: djtDelta,  // Return the deltas
-            contractBalance,
-            currentEthTotal: currentEthBalance
-        };
+        console.log('Cache updated at', new Date());
+    } catch (error) {
+        console.error('Error updating cache:', error);
     }
-
-    // Update cache for each time frame
-    cache['1d'] = await generateData('1d');
-    cache['7d'] = await generateData('7d');
-    cache['30d'] = await generateData('30d');
-    cache['custom'] = await generateData('custom');
-
-    console.log('Cache updated at', new Date());
 }
 
 // Initial cache update
@@ -128,7 +137,7 @@ updateCache();
 // Update cache every minute
 setInterval(updateCache, 60000);
 
-app.get('/api/data', async (req, res) => {
+app.get('/api/data', (req, res) => {
     const { timeFrame } = req.query;
 
     if (cache[timeFrame]) {
