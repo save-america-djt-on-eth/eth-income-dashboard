@@ -1,8 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios'); // Add axios for API calls
+const axios = require('axios');
 const { ethers } = require('ethers');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -10,7 +11,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 
 const infuraApiKey = process.env.INFURA_API_KEY;
-const etherscanApiKey = process.env.ETHERSCAN_API_KEY; // Add Etherscan API key
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${infuraApiKey}`);
 
 app.use(express.json());
@@ -46,14 +47,13 @@ app.get('/api/data', async (req, res) => {
         const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerDay);
 
         const contractBalance = internalTransactions.reduce((total, tx) => {
-            const value = tx.value.toString(); // Ensure value is a string
-            const integerPart = value.slice(0, -18) || '0'; // Get the integer part, default to '0' if empty
-            const decimalPart = value.slice(-18).padStart(18, '0'); // Get the decimal part, pad with zeros if necessary
-            const formattedValue = parseFloat(`${integerPart}.${decimalPart}`); // Combine parts and convert to float
+            const value = tx.value.toString();
+            const integerPart = value.slice(0, -18) || '0';
+            const decimalPart = value.slice(-18).padStart(18, '0');
+            const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
             return total + formattedValue;
-        }, 0).toFixed(4); // Limit to three decimal places
+        }, 0).toFixed(4);
         
-        // Convert contractBalance to a float for further processing
         const finalContractBalance = parseFloat(contractBalance);
         const labels = generateTimeLabels(timeFrame);
         const djtData = generateRandomData(labels.length);
@@ -75,11 +75,11 @@ app.get('/api/data', async (req, res) => {
             currentEthTotal: currentEthBalance
         };
 
-        console.log('API Response:', response); // Log the response
+        console.log('API Response:', response);
 
         res.json(response);
     } catch (error) {
-        console.error('Error:', error); // Log the error
+        console.error('Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
