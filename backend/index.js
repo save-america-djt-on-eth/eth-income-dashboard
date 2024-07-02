@@ -31,19 +31,27 @@ app.get('/api/data', async (req, res) => {
 
         const currentBlock = await provider.getBlockNumber();
         const blocksPerDay = 6500;
+        const blocksPerHour = Math.round(blocksPerDay / 24);
+        const blocksPer12Hours = Math.round(blocksPerDay / 2);
 
-        let days;
+        let days, interval, blocksPerInterval;
         if (timeFrame === '1d') {
             days = 1;
+            interval = 24; // 24 hours
+            blocksPerInterval = blocksPerHour;
         } else if (timeFrame === '30d') {
             days = 30;
+            interval = 30; // 30 days
+            blocksPerInterval = blocksPerDay;
         } else {
             days = 7;
+            interval = 14; // 7 days with 12-hour intervals
+            blocksPerInterval = blocksPer12Hours;
         }
 
         const supplyChange = [];
-        for (let i = days; i >= 0; i--) {
-            const blockNumber = currentBlock - (i * blocksPerDay);
+        for (let i = interval; i >= 0; i--) {
+            const blockNumber = currentBlock - (i * blocksPerInterval);
             const balance = await provider.getBalance(address, blockNumber);
             const ethBalance = parseFloat(ethers.formatEther(balance));
             supplyChange.push(ethBalance);
@@ -51,7 +59,7 @@ app.get('/api/data', async (req, res) => {
 
         const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
 
-        const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerDay, days);
+        const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
 
         const contractBalance = internalTransactions.reduce((total, tx) => {
             const value = tx.value.toString();
@@ -62,18 +70,18 @@ app.get('/api/data', async (req, res) => {
         }, 0).toFixed(4);
 
         const finalContractBalance = parseFloat(contractBalance);
-        const labels = generateTimeLabels(days);
+        const labels = generateTimeLabels(days, interval);
 
-        // Compute daily supplyChange delta
-        const dailySupplyDelta = [];
+        // Compute supplyChange delta
+        const supplyDelta = [];
         for (let i = 1; i < supplyChange.length; i++) {
-            dailySupplyDelta.push(supplyChange[i] - supplyChange[i - 1]);
+            supplyDelta.push(supplyChange[i] - supplyChange[i - 1]);
         }
 
-        // Compute daily cumulativeEthGenerated delta
-        const dailyDJTDelta = [];
+        // Compute cumulativeEthGenerated delta
+        const djtDelta = [];
         for (let i = 1; i < cumulativeEthGenerated.length; i++) {
-            dailyDJTDelta.push(cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]);
+            djtDelta.push(cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]);
         }
 
         const djtData = generateRandomData(labels.length);
@@ -85,12 +93,12 @@ app.get('/api/data', async (req, res) => {
         }
 
         const response = {
-            labels: labels.slice(1),  // Remove the first label as we now have 7 deltas
+            labels: labels.slice(1),  // Remove the first label as we now have deltas
             djt: djtData,
             nft: nftData,
             other: otherData,
-            supplyChange: dailySupplyDelta,  // Return the daily deltas
-            cumulativeEthGenerated: dailyDJTDelta,  // Return the daily deltas
+            supplyChange: supplyDelta,  // Return the deltas
+            cumulativeEthGenerated: djtDelta,  // Return the deltas
             contractBalance,
             currentEthTotal: currentEthBalance
         };
@@ -129,7 +137,7 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
     }
 }
 
-function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerDay, days) {
+function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerInterval, interval) {
     const cumulativeEthGenerated = new Array(length).fill(0);
     transactions.forEach(tx => {
         const value = tx.value.toString();
@@ -139,7 +147,7 @@ function calculateCumulativeEthGenerated(transactions, length, currentBlock, blo
         const blockNumber = parseInt(tx.blockNumber);
 
         for (let i = 0; i < length; i++) {
-            const blockThreshold = currentBlock - ((days - i) * blocksPerDay);
+            const blockThreshold = currentBlock - ((interval - i) * blocksPerInterval);
             if (blockNumber <= blockThreshold) {
                 cumulativeEthGenerated[i] += ethValue;
             }
@@ -148,13 +156,13 @@ function calculateCumulativeEthGenerated(transactions, length, currentBlock, blo
     return cumulativeEthGenerated;
 }
 
-function generateTimeLabels(days) {
+function generateTimeLabels(days, interval) {
     const labels = [];
     const today = new Date();
-    for (let i = days; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - i);
-        labels.push(date.toISOString().split('T')[0]);
+    const msPerInterval = (days * 24 * 60 * 60 * 1000) / interval;
+    for (let i = interval; i >= 0; i--) {
+        const date = new Date(today.getTime() - (i * msPerInterval));
+        labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
     }
     return labels;
 }
