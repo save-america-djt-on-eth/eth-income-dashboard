@@ -3,6 +3,14 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function fetchData(timeFrame) {
+    const buttons = document.querySelectorAll("#time-frame-buttons button");
+    buttons.forEach(button => button.classList.remove("active"));
+
+    const activeButton = Array.from(buttons).find(button => button.textContent.toLowerCase() === timeFrame.toLowerCase());
+    if (activeButton) {
+        activeButton.classList.add("active");
+    }
+
     fetch(`http://5.161.44.208:3000/api/data?timeFrame=${timeFrame}&simulate=false`)
         .then(response => response.json())
         .then(data => {
