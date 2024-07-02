@@ -1,3 +1,5 @@
+import { format } from 'date-fns';
+
 document.addEventListener("DOMContentLoaded", function () {
     fetch("http://5.161.44.208:3000/api/data?timeFrame=7d&simulate=false")
         .then(response => response.json())
@@ -45,11 +47,6 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated) {
                         tooltipFormat: 'MM/dd/yyyy',
                         displayFormats: {
                             day: 'MM/dd/yyyy'
-                        }
-                    },
-                    adapters: {
-                        date: {
-                            locale: dateFns // This should now be properly loaded
                         }
                     }
                 }
