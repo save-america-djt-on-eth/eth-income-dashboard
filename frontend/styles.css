@@ -24,3 +24,20 @@ body {
 #totalEthSupply {
     font-size: 2em;
 }
+
+#chart-container {
+    width: 80%;
+    margin: auto;
+}
+
+h1 {
+    color: #ECF0F1;
+}
+
+#eth-total, #eth-djt, #eth-percentage {
+    margin: 10px 0;
+}
+
+#eth-total span, #eth-djt span, #eth-percentage span {
+    font-weight: bold;
+}
