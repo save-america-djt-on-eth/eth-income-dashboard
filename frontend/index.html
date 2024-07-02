@@ -8,23 +8,27 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Donald J. Trump ETH Dashboard</h1>
-    <div id="chart-container">
-        <div id="myChart" style="height: 400px;"></div>
-    </div>
-    <div id="eth-total">
-        Current ETH Holdings: <span id="total-eth">0</span>
-    </div>
-    <div id="eth-djt">
-        $DJT Generated ETH Count: <span id="eth-generated-djt">0</span>
-    </div>
-    <div id="eth-percentage">
-        $DJT Generated ETH Percent: <span id="eth-percentage-value">0%</span>
-    </div>
-    <div id="time-frame-buttons">
-        <button onclick="fetchData('1d')">1D</button>
-        <button onclick="fetchData('7d')">7D</button>
-        <button onclick="fetchData('30d')">30D</button>
+    <div class="container">
+        <h1>Donald J. Trump ETH Dashboard</h1>
+        <div id="chart-container">
+            <div id="myChart" style="height: 400px;"></div>
+        </div>
+        <div class="metrics">
+            <div id="eth-total">
+                Current ETH Holdings: <span id="total-eth">0</span>
+            </div>
+            <div id="eth-djt">
+                $DJT Generated ETH Count: <span id="eth-generated-djt">0</span>
+            </div>
+            <div id="eth-percentage">
+                $DJT Generated ETH Percent: <span id="eth-percentage-value">0%</span>
+            </div>
+        </div>
+        <div id="time-frame-buttons">
+            <button onclick="fetchData('1d')">1D</button>
+            <button onclick="fetchData('7d')">7D</button>
+            <button onclick="fetchData('30d')">30D</button>
+        </div>
     </div>
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <script src="scripts.js"></script>
