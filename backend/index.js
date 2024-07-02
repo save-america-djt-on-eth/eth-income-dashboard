@@ -60,6 +60,11 @@ app.get('/api/data', async (req, res) => {
         for (let i = 1; i < supplyChange.length; i++) {
             dailySupplyDelta.push(supplyChange[i] - supplyChange[i - 1]);
         }
+		// Compute daily cumulativeEthGenerated delta
+        const dailyDJTDelta = [];
+        for (let i = 1; i < cumulativeEthGenerated.length; i++) {
+            dailyDJTDelta.push(cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]);
+        }
 
         const djtData = generateRandomData(labels.length);
         const nftData = generateRandomData(labels.length);
@@ -75,7 +80,7 @@ app.get('/api/data', async (req, res) => {
             nft: nftData,
             other: otherData,
             supplyChange: dailySupplyDelta,  // Return the daily deltas
-            cumulativeEthGenerated: cumulativeEthGenerated,  // Return the daily deltas
+            cumulativeEthGenerated: dailyDJTDelta,  // Return the daily deltas
             contractBalance,
             currentEthTotal: currentEthBalance
         };
