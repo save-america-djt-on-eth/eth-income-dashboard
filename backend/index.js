@@ -1,3 +1,25 @@
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+const { ethers } = require('ethers');
+const path = require('path');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Enable CORS for all routes
+app.use(cors());
+
+const infuraApiKey = process.env.INFURA_API_KEY;
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${infuraApiKey}`);
+
+app.use(express.json());
+
+// Serve static files from the frontend directory
+app.use(express.static(path.join(__dirname, 'frontend')));
+
 app.get('/api/data', async (req, res) => {
     const { timeFrame, simulate } = req.query;
     const address = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
@@ -47,7 +69,8 @@ app.get('/api/data', async (req, res) => {
         for (let i = 1; i < supplyChange.length; i++) {
             dailySupplyDelta.push(supplyChange[i] - supplyChange[i - 1]);
         }
-		// Compute daily cumulativeEthGenerated delta
+
+        // Compute daily cumulativeEthGenerated delta
         const dailyDJTDelta = [];
         for (let i = 1; i < cumulativeEthGenerated.length; i++) {
             dailyDJTDelta.push(cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]);
@@ -81,6 +104,50 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
+    try {
+        const response = await axios.get(`https://api.etherscan.io/api`, {
+            params: {
+                module: 'account',
+                action: 'txlistinternal',
+                address: toAddress,
+                startblock: 0,
+                endblock: 'latest',
+                sort: 'asc',
+                apikey: etherscanApiKey
+            }
+        });
+        if (response.data.status === "1") {
+            return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
+        } else {
+            console.error('Etherscan API Error:', response.data.message);
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching internal transactions from Etherscan:', error);
+        return [];
+    }
+}
+
+function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerDay) {
+    const cumulativeEthGenerated = new Array(length).fill(0);
+    transactions.forEach(tx => {
+        const value = tx.value.toString();
+        const integerPart = value.slice(0, -18) || '0';
+        const decimalPart = value.slice(-18).padStart(18, '0');
+        const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
+        const blockNumber = parseInt(tx.blockNumber);
+
+        for (let i = 0; i < length; i++) {
+            const blockThreshold = currentBlock - ((days - i) * blocksPerDay);
+            if (blockNumber <= blockThreshold) {
+                cumulativeEthGenerated[i] += ethValue;
+            }
+        }
+    });
+    return cumulativeEthGenerated;
+}
+
 function generateTimeLabels(days) {
     const labels = [];
     const today = new Date();
@@ -91,3 +158,11 @@ function generateTimeLabels(days) {
     }
     return labels;
 }
+
+function generateRandomData(length) {
+    return Array.from({ length }, () => Math.floor(Math.random() * 100));
+}
+
+app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on port ${port}`);
+});
