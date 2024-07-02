@@ -57,3 +57,8 @@ h1 {
 #time-frame-buttons button:hover {
     background-color: #333333;
 }
+
+#time-frame-buttons .active {
+    background-color: #4CAF50; /* Highlight color */
+    color: white;
+}
