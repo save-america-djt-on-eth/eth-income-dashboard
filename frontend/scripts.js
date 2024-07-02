@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-    fetch("http://localhost:3000/api/data?timeFrame=7d&simulate=false")
+    fetch("http://5.161.44.208:3000/api/data?timeFrame=7d&simulate=false") // Ensure this is the correct IP/port
         .then(response => response.json())
         .then(data => {
             console.log("API Data: ", data);
