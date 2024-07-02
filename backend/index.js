@@ -13,7 +13,10 @@ app.use(cors());
 
 const infuraApiKey = process.env.INFURA_API_KEY;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${infuraApiKey}`);
+const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
+console.log(`Using provider URL: ${providerUrl}`);
+
+const provider = new ethers.JsonRpcProvider(providerUrl);
 
 app.use(express.json());
 
