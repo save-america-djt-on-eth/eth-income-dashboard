@@ -20,20 +20,28 @@ app.use(express.json());
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-app.get('/api/data', async (req, res) => {
-    const { timeFrame, simulate } = req.query;
+// Cache object to store data
+let cache = {
+    '1d': null,
+    '7d': null,
+    '30d': null,
+    'custom': null
+};
+
+// Function to update the cache
+async function updateCache() {
     const address = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
     const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
 
-    try {
-        const currentBalance = await provider.getBalance(address);
-        const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
+    const currentBalance = await provider.getBalance(address);
+    const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
+    const currentBlock = await provider.getBlockNumber();
+    const blocksPerDay = 6500;
+    const blocksPerHour = Math.round(blocksPerDay / 24);
+    const blocksPer12Hours = Math.round(blocksPerDay / 2);
 
-        const currentBlock = await provider.getBlockNumber();
-        const blocksPerDay = 6500;
-        const blocksPerHour = Math.round(blocksPerDay / 24);
-        const blocksPer12Hours = Math.round(blocksPerDay / 2);
-
+    // Function to generate data for a given time frame
+    async function generateData(timeFrame) {
         let days, interval, blocksPerInterval, startDate, endDate;
         if (timeFrame === '1d') {
             days = 1;
@@ -75,7 +83,6 @@ app.get('/api/data', async (req, res) => {
             return total + formattedValue;
         }, 0).toFixed(4);
 
-        const finalContractBalance = parseFloat(contractBalance);
         const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
 
         // Compute supplyChange delta
@@ -94,11 +101,7 @@ app.get('/api/data', async (req, res) => {
         const nftData = generateRandomData(labels.length);
         const otherData = generateRandomData(labels.length);
 
-        if (simulate) {
-            // Simulation logic
-        }
-
-        const response = {
+        return {
             labels: labels.slice(1),  // Remove the first label as we now have deltas
             djt: djtData,
             nft: nftData,
@@ -108,13 +111,30 @@ app.get('/api/data', async (req, res) => {
             contractBalance,
             currentEthTotal: currentEthBalance
         };
+    }
 
-        console.log('API Response:', response);
+    // Update cache for each time frame
+    cache['1d'] = await generateData('1d');
+    cache['7d'] = await generateData('7d');
+    cache['30d'] = await generateData('30d');
+    cache['custom'] = await generateData('custom');
 
-        res.json(response);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: error.message });
+    console.log('Cache updated at', new Date());
+}
+
+// Initial cache update
+updateCache();
+
+// Update cache every minute
+setInterval(updateCache, 60000);
+
+app.get('/api/data', async (req, res) => {
+    const { timeFrame } = req.query;
+
+    if (cache[timeFrame]) {
+        res.json(cache[timeFrame]);
+    } else {
+        res.status(400).json({ error: 'Invalid time frame' });
     }
 });
 
