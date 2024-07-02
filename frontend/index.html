@@ -20,7 +20,7 @@
 <body>
     <h1>Donald J. Trump ETH Dashboard</h1>
     <div id="chart-container">
-        <canvas id="myChart"></canvas>
+        <div id="myChart" style="height: 400px;"></div>
     </div>
     <div id="eth-total">
         Current ETH Holdings: <span id="total-eth">0</span>
@@ -31,8 +31,7 @@
     <div id="eth-percentage">
         $DJT Generated ETH Percent: <span id="eth-percentage-value">0%</span>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="bundle.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="scripts.js"></script>
 </body>
 </html>
