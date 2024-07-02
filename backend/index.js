@@ -51,7 +51,7 @@ app.get('/api/data', async (req, res) => {
 
         const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
 
-        const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerDay);
+        const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerDay, days);
 
         const contractBalance = internalTransactions.reduce((total, tx) => {
             const value = tx.value.toString();
@@ -129,7 +129,7 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
     }
 }
 
-function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerDay) {
+function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerDay, days) {
     const cumulativeEthGenerated = new Array(length).fill(0);
     transactions.forEach(tx => {
         const value = tx.value.toString();
