@@ -53,11 +53,11 @@ async function updateCache() {
                 interval = 30; // 30 days
                 blocksPerInterval = blocksPerDay;
             } else if (timeFrame === 'custom') {
-                days = 0;
-                interval = 30; // 30 custom intervals
                 startDate = new Date('2024-03-21');
                 endDate = new Date();
-                blocksPerInterval = Math.floor((currentBlock - await provider.getBlockNumber(startDate)) / 30);
+                days = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+                interval = 30; // 30 custom intervals
+                blocksPerInterval = Math.floor((currentBlock - (currentBlock - (days * blocksPerDay))) / 30);
             } else {
                 days = 7;
                 interval = 14; // 7 days with 12-hour intervals
