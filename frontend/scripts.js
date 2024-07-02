@@ -11,7 +11,13 @@ function fetchData(timeFrame) {
         activeButton.classList.add("active");
     }
 
-    fetch(`http://5.161.44.208:3000/api/data?timeFrame=${timeFrame}&simulate=false`)
+    // Get the current protocol and hostname
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const apiUrl = `${protocol}//${hostname}${port}/api/data?timeFrame=${timeFrame}&simulate=false`;
+
+    fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
             console.log("API Data: ", data);
@@ -36,7 +42,7 @@ function fetchData(timeFrame) {
 
 function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
     const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
-    
+
     Highcharts.chart('myChart', {
         chart: {
             type: 'line',
