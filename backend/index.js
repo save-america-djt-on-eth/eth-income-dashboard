@@ -62,10 +62,12 @@ async function updateCache() {
                 startDate = new Date('2024-03-21');
                 endDate = new Date();
                 blocksPerInterval = Math.floor((currentBlock - await provider.getBlockNumber(startDate)) / 30);
-            } else {
+            } else if (timeFrame === '7d') { // Make sure this condition is handled
                 days = 7;
                 interval = 14; // 7 days with 12-hour intervals
                 blocksPerInterval = blocksPer12Hours;
+            } else {
+                throw new Error('Invalid time frame');
             }
 
             const supplyChange = [];
