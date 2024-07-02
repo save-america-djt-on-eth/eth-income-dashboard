@@ -49,7 +49,7 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated) {
                     },
                     adapters: {
                         date: {
-                            locale: dateFns // Use the global date-fns locale
+                            locale: dateFns
                         }
                     }
                 }
