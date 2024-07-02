@@ -11,13 +11,13 @@ const port = process.env.PORT || 3000;
 // Enable CORS for all routes
 app.use(cors());
 
-const infuraApiKey = process.env.INFURA_API_KEY;
-const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
+// Use the provided test URI
+const providerUrl = 'https://mainnet.infura.io/v3/1dfb913a428a4a0097f10c477b30d14a';
 console.log(`Using provider URL: ${providerUrl}`);
 
 const provider = new ethers.JsonRpcProvider(providerUrl);
 
+// Middleware to parse JSON
 app.use(express.json());
 
 // Serve static files from the frontend directory
@@ -142,6 +142,7 @@ setInterval(updateCache, 60000);
 
 app.get('/api/data', (req, res) => {
     const { timeFrame } = req.query;
+    console.log(`Received request for timeFrame: ${timeFrame}`);
 
     if (cache[timeFrame]) {
         res.json(cache[timeFrame]);
