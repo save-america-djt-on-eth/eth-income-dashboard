@@ -34,7 +34,7 @@ app.get('/api/data', async (req, res) => {
         const blocksPerHour = Math.round(blocksPerDay / 24);
         const blocksPer12Hours = Math.round(blocksPerDay / 2);
 
-        let days, interval, blocksPerInterval;
+        let days, interval, blocksPerInterval, startDate, endDate;
         if (timeFrame === '1d') {
             days = 1;
             interval = 24; // 24 hours
@@ -43,6 +43,12 @@ app.get('/api/data', async (req, res) => {
             days = 30;
             interval = 30; // 30 days
             blocksPerInterval = blocksPerDay;
+        } else if (timeFrame === 'custom') {
+            days = 0;
+            interval = 30; // 30 custom intervals
+            startDate = new Date('2024-03-21');
+            endDate = new Date();
+            blocksPerInterval = Math.floor((currentBlock - await provider.getBlockNumber(startDate)) / 30);
         } else {
             days = 7;
             interval = 14; // 7 days with 12-hour intervals
@@ -70,7 +76,7 @@ app.get('/api/data', async (req, res) => {
         }, 0).toFixed(4);
 
         const finalContractBalance = parseFloat(contractBalance);
-        const labels = generateTimeLabels(days, interval);
+        const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
 
         // Compute supplyChange delta
         const supplyDelta = [];
@@ -162,6 +168,16 @@ function generateTimeLabels(days, interval) {
     const msPerInterval = (days * 24 * 60 * 60 * 1000) / interval;
     for (let i = interval; i >= 0; i--) {
         const date = new Date(today.getTime() - (i * msPerInterval));
+        labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
+    }
+    return labels;
+}
+
+function generateCustomTimeLabels(startDate, endDate, interval) {
+    const labels = [];
+    const msPerInterval = (endDate - startDate) / interval;
+    for (let i = 0; i <= interval; i++) {
+        const date = new Date(startDate.getTime() + (i * msPerInterval));
         labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
     }
     return labels;
