@@ -6,7 +6,7 @@ function fetchData(timeFrame) {
     const buttons = document.querySelectorAll("#time-frame-buttons button");
     buttons.forEach(button => button.classList.remove("active"));
 
-    const activeButton = Array.from(buttons).find(button => button.textContent.toLowerCase() === timeFrame.toLowerCase());
+    const activeButton = Array.from(buttons).find(button => button.textContent.toLowerCase() === timeFrame.toLowerCase() || button.innerHTML.includes("greyscale-djt.ico"));
     if (activeButton) {
         activeButton.classList.add("active");
     }
@@ -16,7 +16,7 @@ function fetchData(timeFrame) {
         .then(data => {
             console.log("API Data: ", data);
             // Update the chart
-            updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated);
+            updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, timeFrame);
 
             // Update the ETH values
             document.getElementById("total-eth").innerText = data.currentEthTotal.toFixed(4);
@@ -34,7 +34,9 @@ function fetchData(timeFrame) {
         .catch(error => console.error("Error fetching data: ", error));
 }
 
-function updateChart(labels, supplyChange, cumulativeEthGenerated) {
+function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
+    const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
+    
     Highcharts.chart('myChart', {
         chart: {
             type: 'line',
@@ -45,7 +47,7 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated) {
             plotBorderColor: '#606063'
         },
         title: {
-            text: '',
+            text: titleText,
             style: {
                 color: '#E0E0E3',
                 textTransform: 'uppercase',
