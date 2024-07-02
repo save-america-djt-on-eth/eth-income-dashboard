@@ -33,7 +33,7 @@ app.get('/api/data', async (req, res) => {
         const blocksPerDay = 6500;
 
         const supplyChange = [];
-        for (let i = 6; i >= 0; i--) {
+        for (let i = 7; i >= 0; i--) {
             const blockNumber = currentBlock - (i * blocksPerDay);
             const balance = await provider.getBalance(address, blockNumber);
             const ethBalance = parseFloat(ethers.formatEther(balance));
@@ -54,6 +54,13 @@ app.get('/api/data', async (req, res) => {
 
         const finalContractBalance = parseFloat(contractBalance);
         const labels = generateTimeLabels(timeFrame);
+
+        // Compute daily delta
+        const dailyDelta = [];
+        for (let i = 1; i < supplyChange.length; i++) {
+            dailyDelta.push(supplyChange[i] - supplyChange[i - 1]);
+        }
+
         const djtData = generateRandomData(labels.length);
         const nftData = generateRandomData(labels.length);
         const otherData = generateRandomData(labels.length);
@@ -63,12 +70,12 @@ app.get('/api/data', async (req, res) => {
         }
 
         const response = {
-            labels,
+            labels: labels.slice(1),  // Remove the first label as we now have 7 deltas
             djt: djtData,
             nft: nftData,
             other: otherData,
-            supplyChange: supplyChange,
-            cumulativeEthGenerated: cumulativeEthGenerated,
+            supplyChange: supplyChange.slice(1),  // Remove the first supply change value
+            cumulativeEthGenerated: dailyDelta,  // Return the daily deltas
             contractBalance,
             currentEthTotal: currentEthBalance
         };
@@ -117,7 +124,7 @@ function calculateCumulativeEthGenerated(transactions, length, currentBlock, blo
         const blockNumber = parseInt(tx.blockNumber);
 
         for (let i = 0; i < length; i++) {
-            const blockThreshold = currentBlock - ((6 - i) * blocksPerDay);
+            const blockThreshold = currentBlock - ((7 - i) * blocksPerDay);
             if (blockNumber <= blockThreshold) {
                 cumulativeEthGenerated[i] += ethValue;
             }
@@ -129,7 +136,7 @@ function calculateCumulativeEthGenerated(transactions, length, currentBlock, blo
 function generateTimeLabels(timeFrame) {
     const labels = [];
     const today = new Date();
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 7; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
         labels.push(date.toISOString().split('T')[0]);
