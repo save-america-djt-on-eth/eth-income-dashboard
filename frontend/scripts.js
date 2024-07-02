@@ -106,11 +106,11 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated) {
             }
         },
         series: [{
-            name: 'ETH',
+            name: 'Other',
             data: supplyChange,
             color: '#29ABE2'
         }, {
-            name: 'BTC',
+            name: 'DJT',
             data: cumulativeEthGenerated,
             color: '#F15A24'
         }],
