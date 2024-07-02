@@ -11,8 +11,9 @@ const port = process.env.PORT || 3000;
 // Enable CORS for all routes
 app.use(cors());
 
-// Use the provided test URI
-const providerUrl = 'https://mainnet.infura.io/v3/1dfb913a428a4a0097f10c477b30d14a';
+// Use the Infura API key from .env file
+const infuraApiKey = process.env.INFURA_API_KEY;
+const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
 console.log(`Using provider URL: ${providerUrl}`);
 
 const provider = new ethers.JsonRpcProvider(providerUrl);
@@ -152,6 +153,7 @@ app.get('/api/data', (req, res) => {
 });
 
 async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
     try {
         const response = await axios.get(`https://api.etherscan.io/api`, {
             params: {
