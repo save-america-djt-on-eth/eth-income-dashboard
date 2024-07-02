@@ -1,5 +1,3 @@
-import { format } from 'date-fns';
-
 document.addEventListener("DOMContentLoaded", function () {
     fetch("http://5.161.44.208:3000/api/data?timeFrame=7d&simulate=false")
         .then(response => response.json())
@@ -10,8 +8,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Update the ETH values
             document.getElementById("total-eth").innerText = data.currentEthTotal.toFixed(4);
-            document.getElementById("eth-generated-djt").innerText = data.contractBalance.toFixed(4);
-            const percentage = ((data.contractBalance / data.currentEthTotal) * 100).toFixed(0);
+
+            // Ensure contractBalance is a number
+            const contractBalance = parseFloat(data.contractBalance);
+            document.getElementById("eth-generated-djt").innerText = contractBalance.toFixed(4);
+
+            const percentage = ((contractBalance / data.currentEthTotal) * 100).toFixed(0);
             document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
         .catch(error => console.error("Error fetching data: ", error));
@@ -47,6 +49,11 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated) {
                         tooltipFormat: 'MM/dd/yyyy',
                         displayFormats: {
                             day: 'MM/dd/yyyy'
+                        }
+                    },
+                    adapters: {
+                        date: {
+                            locale: dateFns // This should now be properly loaded
                         }
                     }
                 }
