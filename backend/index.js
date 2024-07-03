@@ -1,76 +1,3 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-const { ethers } = require('ethers');
-const path = require('path');
-const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
-const crypto = require('crypto');
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-// Middleware to generate a nonce for CSP
-app.use((req, res, next) => {
-  res.locals.nonce = crypto.randomBytes(16).toString('base64');
-  next();
-});
-
-// Security middleware with CSP including nonce
-app.use((req, res, next) => {
-  helmet.contentSecurityPolicy({
-    useDefaults: true,
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://code.highcharts.com", `'nonce-${res.locals.nonce}'`],
-      styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
-    },
-  })(req, res, next);
-});
-
-// Set 'trust proxy' to specific addresses
-app.set('trust proxy', '127.0.0.1'); // Change this to your specific proxy address if needed
-
-// Rate limiting middleware to limit requests from each IP
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  keyGenerator: (req, res) => {
-    return req.ip; // Customize key generator to trust specific IP addresses
-  }
-});
-app.use(limiter);
-
-// Enable CORS for all routes
-app.use(cors());
-
-// Middleware to parse JSON
-app.use(express.json());
-
-// Serve static files from the frontend directory
-app.use(express.static(path.join(__dirname, '../frontend')));
-
-// Use the Infura API key from .env file
-const infuraApiKey = process.env.INFURA_API_KEY;
-const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
-console.log(`Using provider URL: ${providerUrl}`);
-
-const provider = new ethers.JsonRpcProvider(providerUrl);
-
-// Cache object to store data
-let cache = {
-  '1d': null,
-  '7d': null,
-  '30d': null,
-  'custom': null
-};
-let lastCacheUpdateTime = 0;
-const cacheDuration = 1800000; // 30 minutes
-
 // Function to update the cache
 async function updateCache() {
   const currentTime = Date.now();
@@ -269,7 +196,7 @@ function generateSmoothingDataPoints(launchDate, march23Date, transactions) {
     const date = new Date(launchDate.getTime() + (i * (1000 * 60 * 60 * 24)));
     smoothingDataPoints.push({
       value: ethers.parseUnits(smoothingValue.toString(), 'ether'),
-      blockNumber: dateToBlockNumber(date)
+      blockNumber: await dateToBlockNumber(date)
     });
   }
   return smoothingDataPoints;
