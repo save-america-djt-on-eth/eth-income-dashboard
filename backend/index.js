@@ -6,26 +6,34 @@ const { ethers } = require('ethers');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const crypto = require('crypto');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Set 'trust proxy' to true
-app.set('trust proxy', true);
+// Middleware to generate a nonce
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
 
-// Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
+// Security middleware with CSP including nonce
+app.use((req, res, next) => {
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://code.highcharts.com", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "https://code.highcharts.com", `'nonce-${res.locals.nonce}'`],
       styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
       connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
     },
-  },
-}));
+  })(req, res, next);
+});
+
+// Set 'trust proxy' to true
+app.set('trust proxy', true);
 
 // Rate limiting middleware
 const limiter = rateLimit({
