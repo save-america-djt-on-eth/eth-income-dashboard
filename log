@@ -67,7 +67,7 @@ nvm install --lts
 5. **Install Dependencies:**
    ```sh
    cd ~/eth-income-dashboard/backend/
-   npm install express axios dotenv ethers cors
+   npm install express axios dotenv ethers cors express-rate-limit
    ```
 
 ### Configure Infura
@@ -83,7 +83,7 @@ nvm install --lts
 ### PM2 Setup
 7. **Install PM2:**
    ```sh
-   npm install -g pm2
+   npm install -g pm2 http-server
    ```
 
 ### Start and Manage the Server
