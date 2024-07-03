@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { applyMiddlewares } = require('./middlewares');
-const { updateCache, getData, getCache } = require('./cache');
+const { updateCache } = require('./cache');
 const { setupRoutes } = require('./routes');
 
 const app = express();
