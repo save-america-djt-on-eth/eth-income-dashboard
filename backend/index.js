@@ -31,9 +31,18 @@ let cache = {
     '30d': null,
     'custom': null
 };
+let lastCacheUpdateTime = 0;
+const cacheDuration = 1800000; // 30 minutes
 
 // Function to update the cache
 async function updateCache() {
+    const currentTime = Date.now();
+    if (currentTime - lastCacheUpdateTime < cacheDuration) {
+        console.log('Cache is up to date.');
+        return; // Skip updating the cache if it was updated recently
+    }
+    lastCacheUpdateTime = currentTime;
+
     const address = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
     const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
 
@@ -140,8 +149,8 @@ async function updateCache() {
 // Initial cache update
 updateCache();
 
-// Update cache every minute
-setInterval(updateCache, 60000);
+// Update cache every 30 minutes
+setInterval(updateCache, 1800000);
 
 app.get('/api/data', (req, res) => {
     const { timeFrame } = req.query;
