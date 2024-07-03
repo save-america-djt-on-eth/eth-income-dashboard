@@ -142,6 +142,14 @@ async function updateCache() {
       // Fetch internal transactions
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
 
+      // Add smoothing logic for custom time frame
+      if (timeFrame === 'custom') {
+        const launchDate = new Date('2024-03-21'); // Launch date
+        const march23Date = new Date('2024-03-23'); // March 23 date
+        const smoothingDataPoints = generateSmoothingDataPoints(launchDate, march23Date, internalTransactions);
+        internalTransactions.push(...smoothingDataPoints);
+      }
+
       // Calculate cumulative ETH generated
       const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
 
@@ -247,6 +255,34 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
     console.error('Error fetching internal transactions from Etherscan:', error);
     return [];
   }
+}
+
+// New function to generate smoothing data points
+function generateSmoothingDataPoints(launchDate, march23Date, transactions) {
+  const smoothingDataPoints = [];
+  const diffInMs = march23Date - launchDate;
+  const numberOfDataPoints = Math.ceil(diffInMs / (1000 * 60 * 60 * 24)); // Daily data points
+  const totalValue = transactions.reduce((total, tx) => total + parseFloat(ethers.formatEther(tx.value.toString())), 0);
+  const smoothingValue = totalValue / numberOfDataPoints;
+
+  for (let i = 1; i <= numberOfDataPoints; i++) {
+    const date = new Date(launchDate.getTime() + (i * (1000 * 60 * 60 * 24)));
+    smoothingDataPoints.push({
+      value: ethers.parseUnits(smoothingValue.toString(), 'ether'),
+      blockNumber: dateToBlockNumber(date)
+    });
+  }
+  return smoothingDataPoints;
+}
+
+// New function to convert date to block number (approximation)
+async function dateToBlockNumber(date) {
+  const currentDate = new Date();
+  const currentBlock = await provider.getBlockNumber();
+  const diffInMs = currentDate - date;
+  const blocksPerMs = 6500 / (24 * 60 * 60 * 1000);
+  const blockNumber = currentBlock - Math.floor(diffInMs * blocksPerMs);
+  return blockNumber;
 }
 
 // Calculate cumulative ETH generated from transactions
