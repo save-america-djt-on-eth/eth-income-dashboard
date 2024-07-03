@@ -32,13 +32,16 @@ app.use((req, res, next) => {
   })(req, res, next);
 });
 
-// Set 'trust proxy' to true
-app.set('trust proxy', true);
+// Set 'trust proxy' to specific addresses
+app.set('trust proxy', '127.0.0.1'); // Change this to your specific proxy address if needed
 
 // Rate limiting middleware
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
+  keyGenerator: (req, res) => {
+    return req.ip; // Customize key generator to trust specific IP addresses
+  }
 });
 app.use(limiter);
 
@@ -114,6 +117,7 @@ async function updateCache() {
           blocksPerInterval = Math.floor(blocksPerDay * 2);
           break;
         default:
+          console.error(`Invalid time frame: ${timeFrame}`);
           throw new Error('Invalid time frame');
       }
 
