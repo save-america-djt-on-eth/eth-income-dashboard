@@ -15,8 +15,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://code.highcharts.com"],
-      styleSrc: ["'self'", "https://code.highcharts.com"],
+      scriptSrc: ["'self'", "https://code.highcharts.com", "'unsafe-inline'"],
+      styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
       connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
     },
