@@ -1,5 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
     fetchData('7d'); // Default time frame
+
+    // Add event listeners to buttons
+    document.getElementById('btn-1d').addEventListener('click', () => fetchData('1d'));
+    document.getElementById('btn-7d').addEventListener('click', () => fetchData('7d'));
+    document.getElementById('btn-30d').addEventListener('click', () => fetchData('30d'));
+    document.getElementById('btn-custom').addEventListener('click', () => fetchData('custom'));
 });
 
 function fetchData(timeFrame) {
