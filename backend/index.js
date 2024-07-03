@@ -10,6 +10,9 @@ const helmet = require('helmet');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Set 'trust proxy' to true
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
