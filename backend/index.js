@@ -73,7 +73,7 @@ async function updateCache() {
 				diffInMs = endDate - startDate;
                 days = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
                 interval = 30; // 30 custom intervals
-                blocksPerInterval = Math.floor((blocksPerDay * 2);
+                blocksPerInterval = Math.floor(blocksPerDay * 2);
             } else if (timeFrame === '7d') {
                 days = 7;
                 interval = 28; // 7 days with 6-hour intervals
