@@ -153,11 +153,22 @@ updateCache();
 setInterval(updateCache, 1800000);
 
 app.get('/api/data', (req, res) => {
-    const { timeFrame } = req.query;
-    console.log(`Received request for timeFrame: ${timeFrame}`);
+    const { timeFrame, simulate } = req.query;
+    console.log(`Received request for timeFrame: ${timeFrame} with simulate: ${simulate}`);
 
+    // Check if the timeFrame parameter is valid
     if (cache[timeFrame]) {
-        res.json(cache[timeFrame]);
+        if (simulate && simulate === 'false') {
+            // No simulation, return the cached data
+            res.json(cache[timeFrame]);
+        } else if (simulate && simulate === 'true') {
+            // Add your simulation logic here
+            let simulatedData = JSON.parse(JSON.stringify(cache[timeFrame])); // Deep clone the cache data
+            simulatedData.cumulativeEthGenerated = simulatedData.cumulativeEthGenerated.map(value => value * 1.1); // Example simulation
+            res.json(simulatedData);
+        } else {
+            res.json(cache[timeFrame]);
+        }
     } else {
         console.error(`Invalid time frame requested: ${timeFrame}`);
         res.status(400).json({ error: 'Invalid time frame' });
