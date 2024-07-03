@@ -1,224 +1,336 @@
-document.addEventListener("DOMContentLoaded", function () {
-    fetchData('7d'); // Default time frame
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+const { ethers } = require('ethers');
+const path = require('path');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Enable CORS for all routes
+app.use(cors());
+
+// Use the Infura API key from .env file
+const infuraApiKey = process.env.INFURA_API_KEY;
+const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
+console.log(`Using provider URL: ${providerUrl}`);
+
+const provider = new ethers.JsonRpcProvider(providerUrl);
+
+// Middleware to parse JSON
+app.use(express.json());
+
+// Serve static files from the frontend directory
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Cache object to store data
+let cache = {
+    '1d': null,
+    '7d': null,
+    '30d': null,
+    'custom': null
+};
+let lastCacheUpdateTime = 0;
+const cacheDuration = 1800000; // 30 minutes
+
+// Function to update the cache
+async function updateCache() {
+    const currentTime = Date.now();
+    if (currentTime - lastCacheUpdateTime < cacheDuration) {
+        console.log('Cache is up to date.');
+        return; // Skip updating the cache if it was updated recently
+    }
+    lastCacheUpdateTime = currentTime;
+
+    const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
+    const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
+
+    try {
+        const currentBalance = await provider.getBalance(trumpAddress);
+        const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
+        const currentBlock = await provider.getBlockNumber();
+        const blocksPerDay = 6500;
+        const blocksPerHour = Math.round(blocksPerDay / 24);
+        const blocksPer12Hours = Math.round(blocksPerDay / 2);
+
+		// Function to generate data for a given time frame
+		async function generateData(timeFrame) {
+			let days, interval, blocksPerInterval, startDate, endDate;
+			if (timeFrame === '1d') {
+				days = 1;
+				interval = 24; // 24 hours
+				blocksPerInterval = blocksPerHour;
+			} else if (timeFrame === '30d') {
+				days = 30;
+				interval = 30; // 30 days
+				blocksPerInterval = blocksPerDay;
+			} else if (timeFrame === 'custom') {
+				startDate = new Date('2024-03-20'); // Start date
+				endDate = new Date(); // Current date
+				const msInDay = 24 * 60 * 60 * 1000; // Milliseconds in a day
+				// Calculate the number of days between the start date and the end date
+				days = Math.ceil((endDate - startDate) / msInDay);
+				interval = 30; // 30 custom intervals
+				blocksPerInterval = Math.floor((currentBlock - await provider.getBlockNumber(startDate)) / interval);
+			} else if (timeFrame === '7d') {
+				days = 7;
+				interval = 14; // 7 days with 12-hour intervals
+				blocksPerInterval = blocksPer12Hours;
+			} else {
+				throw new Error('Invalid time frame');
+			}
+
+			const supplyChange = [];
+			for (let i = interval; i >= 0; i--) {
+				const blockNumber = currentBlock - (i * blocksPerInterval);
+				try {
+					const balance = await provider.getBalance(trumpAddress, blockNumber);
+					const ethBalance = parseFloat(ethers.formatEther(balance));
+					supplyChange.push(ethBalance);
+				} catch (error) {
+					console.error(`Error fetching balance for block ${blockNumber}:`, error);
+					supplyChange.push(0);
+				}
+			}
+
+			const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
+
+			const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
+
+			const contractBalance = internalTransactions.reduce((total, tx) => {
+				const value = tx.value.toString();
+				const integerPart = value.slice(0, -18) || '0';
+				const decimalPart = value.slice(-18).padStart(18, '0');
+				const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
+				return total + formattedValue;
+			}, 0).toFixed(4);
+
+			const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
+
+			// Compute supplyChange delta
+			const supplyDelta = [];
+			for (let i = 1; i < supplyChange.length; i++) {
+				supplyDelta.push(supplyChange[i - 1] + (supplyChange[i] - supplyChange[i - 1]));
+			}
+
+			// Compute cumulativeEthGenerated delta
+			const djtDelta = [];
+			for (let i = 1; i < cumulativeEthGenerated.length; i++) {
+				djtDelta.push(cumulativeEthGenerated[i - 1] + (cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]));
+			}
+
+			const djtData = generateRandomData(labels.length);
+			const nftData = generateRandomData(labels.length);
+			const otherData = generateRandomData(labels.length);
+
+			return {
+				labels: labels.slice(1),  // Remove the first label as we now have deltas
+				djt: djtData,
+				nft: nftData,
+				other: otherData,
+				supplyChange: supplyDelta,  // Return the deltas
+				cumulativeEthGenerated: djtDelta,  // Return the deltas
+				contractBalance,
+				currentEthTotal: currentEthBalance
+			};
+		}
+
+            let days, interval, blocksPerInterval, startDate, endDate;
+            if (timeFrame === '1d') {
+                days = 1;
+                interval = 24; // 24 hours
+                blocksPerInterval = blocksPerHour;
+            } else if (timeFrame === '30d') {
+                days = 30;
+                interval = 30; // 30 days
+                blocksPerInterval = blocksPerDay;
+            } else if (timeFrame === 'custom') {
+                startDate = new Date('2024-03-20'); // Start date
+                endDate = new Date(); // Current date
+                const msInDay = 24 * 60 * 60 * 1000; // Milliseconds in a day
+                // Calculate the number of days between the start date and the end date
+                days = Math.ceil((endDate - startDate) / msInDay);
+                interval = 30; // 30 custom intervals
+                blocksPerInterval = Math.floor((currentBlock - await provider.getBlockNumber(startDate)) / 30);
+            } else if (timeFrame === '7d') { // Make sure this condition is handled
+                days = 7;
+                interval = 14; // 7 days with 12-hour intervals
+                blocksPerInterval = blocksPer12Hours;
+            } else {
+                throw new Error('Invalid time frame');
+            }
+
+            const supplyChange = [];
+            for (let i = interval; i >= 0; i--) {
+                const blockNumber = currentBlock - (i * blocksPerInterval);
+                try {
+                    const balance = await provider.getBalance(trumpAddress, blockNumber);
+                    const ethBalance = parseFloat(ethers.formatEther(balance));
+                    supplyChange.push(ethBalance);
+                } catch (error) {
+                    console.error(`Error fetching balance for block ${blockNumber}:`, error);
+                    supplyChange.push(0);
+                }
+            }
+
+            const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
+
+            const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
+
+            const contractBalance = internalTransactions.reduce((total, tx) => {
+                const value = tx.value.toString();
+                const integerPart = value.slice(0, -18) || '0';
+                const decimalPart = value.slice(-18).padStart(18, '0');
+                const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
+                return total + formattedValue;
+            }, 0).toFixed(4);
+
+            const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
+
+            // Compute supplyChange delta
+            const supplyDelta = [];
+            for (let i = 1; i < supplyChange.length; i++) {
+                supplyDelta.push(supplyChange[i - 1] + (supplyChange[i] - supplyChange[i - 1]));
+            }
+
+            // Compute cumulativeEthGenerated delta
+            const djtDelta = [];
+            for (let i = 1; i < cumulativeEthGenerated.length; i++) {
+                djtDelta.push(cumulativeEthGenerated[i - 1] + (cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]));
+            }
+
+            const djtData = generateRandomData(labels.length);
+            const nftData = generateRandomData(labels.length);
+            const otherData = generateRandomData(labels.length);
+
+            return {
+                labels: labels.slice(1),  // Remove the first label as we now have deltas
+                djt: djtData,
+                nft: nftData,
+                other: otherData,
+                supplyChange: supplyDelta,  // Return the deltas
+                cumulativeEthGenerated: djtDelta,  // Return the deltas
+                contractBalance,
+                currentEthTotal: currentEthBalance
+            };
+        }
+
+        // Update cache for each time frame
+        cache['1d'] = await generateData('1d');
+        cache['7d'] = await generateData('7d');
+        cache['30d'] = await generateData('30d');
+        cache['custom'] = await generateData('custom');
+
+        console.log('Cache updated at', new Date());
+    } catch (error) {
+        console.error('Error updating cache:', error);
+    }
+}
+
+// Initial cache update
+updateCache();
+
+// Update cache every 30 minutes
+setInterval(updateCache, 1800000);
+
+app.get('/api/data', (req, res) => {
+    const { timeFrame, simulate } = req.query;
+    console.log(`Received request for timeFrame: ${timeFrame} with simulate: ${simulate}`);
+
+    // Check if the timeFrame parameter is valid
+    if (cache[timeFrame]) {
+        if (simulate && simulate === 'false') {
+            // No simulation, return the cached data
+            res.json(cache[timeFrame]);
+        } else if (simulate && simulate === 'true') {
+            // Add your simulation logic here
+            let simulatedData = JSON.parse(JSON.stringify(cache[timeFrame])); // Deep clone the cache data
+            simulatedData.cumulativeEthGenerated = simulatedData.cumulativeEthGenerated.map(value => value * 1.1); // Example simulation
+            res.json(simulatedData);
+        } else {
+            res.json(cache[timeFrame]);
+        }
+    } else {
+        console.error(`Invalid time frame requested: ${timeFrame}`);
+        res.status(400).json({ error: 'Invalid time frame' });
+    }
 });
 
-function fetchData(timeFrame) {
-    const buttons = document.querySelectorAll("#time-frame-buttons button");
-    buttons.forEach(button => button.classList.remove("active"));
+app.get('/api/cache', (req, res) => {
+    res.json(cache);
+});
 
-    const activeButton = Array.from(buttons).find(button => button.textContent.toLowerCase() === timeFrame.toLowerCase() || button.innerHTML.includes("greyscale-djt.ico"));
-    if (activeButton) {
-        activeButton.classList.add("active");
-    }
-
-    // Get the current protocol and hostname
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    const port = window.location.port ? `:${window.location.port}` : '';
-    const apiUrl = `${protocol}//${hostname}${port}/api/data?timeFrame=${timeFrame}&simulate=false`;
-
-    fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => {
-            console.log("API Data: ", data);
-            // Update the chart
-            updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, timeFrame);
-
-            // Update the ETH values
-            document.getElementById("total-eth").innerText = data.currentEthTotal.toFixed(4);
-
-            // Ensure contractBalance is a number
-            const contractBalance = parseFloat(data.contractBalance);
-            if (!isNaN(contractBalance)) {
-                document.getElementById("eth-generated-djt").innerText = contractBalance.toFixed(4);
-                const percentage = ((contractBalance / data.currentEthTotal) * 100).toFixed(0);
-                document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
-            } else {
-                console.error("contractBalance is not a valid number");
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
+    const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+    try {
+        const response = await axios.get(`https://api.etherscan.io/api`, {
+            params: {
+                module: 'account',
+                action: 'txlistinternal',
+                address: toAddress,
+                startblock: 0,
+                endblock: 'latest',
+                sort: 'asc',
+                apikey: etherscanApiKey
             }
-        })
-        .catch(error => console.error("Error fetching data: ", error));
+        });
+        if (response.data.status === "1") {
+            return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
+        } else {
+            console.error('Etherscan API Error:', response.data.message);
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching internal transactions from Etherscan:', error);
+        return [];
+    }
 }
 
-function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
-    const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
+function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerInterval, interval) {
+    const cumulativeEthGenerated = new Array(length).fill(0);
+    transactions.forEach(tx => {
+        const value = tx.value.toString();
+        const integerPart = value.slice(0, -18) || '0';
+        const decimalPart = value.slice(-18).padStart(18, '0');
+        const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
+        const blockNumber = parseInt(tx.blockNumber);
 
-    Highcharts.chart('myChart', {
-        chart: {
-            type: 'line',
-            backgroundColor: '#121212',
-            style: {
-                fontFamily: '\'Unica One\', sans-serif'
-            },
-            plotBorderColor: '#606063'
-        },
-        title: {
-            text: titleText,
-            style: {
-                color: '#E0E0E3',
-                textTransform: 'uppercase',
-                fontSize: '20px'
+        for (let i = 0; i < length; i++) {
+            const blockThreshold = currentBlock - ((interval - i) * blocksPerInterval);
+            if (blockNumber <= blockThreshold) {
+                cumulativeEthGenerated[i] += ethValue;
             }
-        },
-        xAxis: {
-            categories: labels,
-            gridLineColor: '#333333',
-            labels: {
-                style: {
-                    color: '#AAAAAA'
-                }
-            },
-            lineColor: '#707073',
-            minorGridLineColor: '#505053',
-            tickColor: '#707073',
-            title: {
-                style: {
-                    color: '#A0A0A3'
-                }
-            }
-        },
-        yAxis: {
-            gridLineColor: '#333333',
-            labels: {
-                style: {
-                    color: '#AAAAAA'
-                }
-            },
-            lineColor: '#707073',
-            minorGridLineColor: '#505053',
-            tickColor: '#707073',
-            tickWidth: 1,
-            title: {
-                text: '',
-                style: {
-                    color: '#A0A0A3'
-                }
-            }
-        },
-        tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            style: {
-                color: '#F0F0F0'
-            }
-        },
-        plotOptions: {
-            series: {
-                dataLabels: {
-                    color: '#B0B0B3'
-                },
-                marker: {
-                    lineColor: '#333'
-                },
-                showInLegend: true
-            },
-            line: {
-                lineWidth: 2,
-                marker: {
-                    enabled: true,
-                    radius: 3
-                },
-                states: {
-                    hover: {
-                        lineWidth: 3
-                    }
-                },
-                threshold: null
-            }
-        },
-        series: [{
-            name: 'Total ETH',
-            data: supplyChange,
-            color: '#29ABE2',
-            visible: false // Hide by default
-        }, {
-            name: '$DJT Generated ETH',
-            data: cumulativeEthGenerated,
-            color: '#F15A24'
-        }],
-        legend: {
-            itemStyle: {
-                color: '#E0E0E3'
-            },
-            itemHoverStyle: {
-                color: '#FFF'
-            },
-            itemHiddenStyle: {
-                color: '#606063'
-            }
-        },
-        credits: {
-            enabled: false
-        },
-        labels: {
-            style: {
-                color: '#707073'
-            }
-        },
-        navigation: {
-            buttonOptions: {
-                symbolStroke: '#DDDDDD',
-                theme: {
-                    fill: '#505053'
-                }
-            }
-        },
-        rangeSelector: {
-            buttonTheme: {
-                fill: '#505053',
-                stroke: '#000000',
-                style: {
-                    color: '#CCC'
-                },
-                states: {
-                    hover: {
-                        fill: '#707073',
-                        stroke: '#000000',
-                        style: {
-                            color: 'white'
-                        }
-                    },
-                    select: {
-                        fill: '#000003',
-                        stroke: '#000000',
-                        style: {
-                            color: 'white'
-                        }
-                    }
-                }
-            },
-            inputBoxBorderColor: '#505053',
-            inputStyle: {
-                backgroundColor: '#333',
-                color: 'silver'
-            },
-            labelStyle: {
-                color: 'silver'
-            }
-        },
-        navigator: {
-            handles: {
-                backgroundColor: '#666',
-                borderColor: '#AAA'
-            },
-            outlineColor: '#CCC',
-            maskFill: 'rgba(255,255,255,0.1)',
-            series: {
-                color: '#7798BF',
-                lineColor: '#A6C7ED'
-            },
-            xAxis: {
-                gridLineColor: '#505053'
-            }
-        },
-        scrollbar: {
-            barBackgroundColor: '#808083',
-            barBorderColor: '#808083',
-            buttonArrowColor: '#CCC',
-            buttonBackgroundColor: '#606063',
-            buttonBorderColor: '#606063',
-            rifleColor: '#FFF',
-            trackBackgroundColor: '#404043',
-            trackBorderColor: '#404043'
         }
     });
+    return cumulativeEthGenerated;
 }
+
+function generateTimeLabels(days, interval) {
+    const labels = [];
+    const today = new Date();
+    const msPerInterval = (days * 24 * 60 * 60 * 1000) / interval;
+    for (let i = interval; i >= 0; i--) {
+        const date = new Date(today.getTime() - (i * msPerInterval));
+        labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
+    }
+    return labels;
+}
+
+function generateCustomTimeLabels(startDate, endDate, interval) {
+    const labels = [];
+    const msPerInterval = (endDate - startDate) / interval;
+    for (let i = 0; i <= interval; i++) {
+        const date = new Date(startDate.getTime() + (i * msPerInterval));
+        labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
+    }
+    return labels;
+}
+
+function generateRandomData(length) {
+    return Array.from({ length }, () => Math.floor(Math.random() * 100));
+}
+
+app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on port ${port}`);
+});
