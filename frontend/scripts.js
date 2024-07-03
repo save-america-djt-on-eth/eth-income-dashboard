@@ -126,7 +126,7 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
             }
         },
         series: [{
-            name: 'Other',
+            name: 'Total',
             data: supplyChange,
             color: '#29ABE2',
             visible: false // Hide by default
