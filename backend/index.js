@@ -52,7 +52,7 @@ async function updateCache() {
         const currentBlock = await provider.getBlockNumber();
         const blocksPerDay = 6500;
         const blocksPerHour = Math.round(blocksPerDay / 24);
-        const blocksPer12Hours = Math.round(blocksPerDay / 2);
+        const blocksPer6Hours = Math.round(blocksPerDay / 4);
 
         // Function to generate data for a given time frame
         async function generateData(timeFrame) {
@@ -66,18 +66,18 @@ async function updateCache() {
                 interval = 30; // 30 days
                 blocksPerInterval = blocksPerDay;
             } else if (timeFrame === 'custom') {
-                startDate = new Date('2024-03-20'); // Start date
+                startDate = new Date('2024-03-20'); // day before Save America $DJT launch date
                 endDate = new Date(); // Current date
-                const msInDay = 24 * 60 * 60 * 1000; // Milliseconds in a day
+				
                 // Calculate the number of days between the start date and the end date
-                days = Math.ceil((endDate - startDate) / msInDay);
+				diffInMs = endDate - startDate;
+                days = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
                 interval = 30; // 30 custom intervals
-                const startBlock = await provider.getBlockNumber(startDate);
-                blocksPerInterval = Math.floor((currentBlock - startBlock) / interval);
+                blocksPerInterval = Math.floor((blocksPerDay * 2);
             } else if (timeFrame === '7d') {
                 days = 7;
-                interval = 14; // 7 days with 12-hour intervals
-                blocksPerInterval = blocksPer12Hours;
+                interval = 28; // 7 days with 6-hour intervals
+                blocksPerInterval = blocksPer6Hours;
             } else {
                 throw new Error('Invalid time frame');
             }
