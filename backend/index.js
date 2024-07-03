@@ -72,8 +72,9 @@ async function updateCache() {
                 // Calculate the number of days between the start date and the end date
                 days = Math.ceil((endDate - startDate) / msInDay);
                 interval = 30; // 30 custom intervals
-                blocksPerInterval = Math.floor((currentBlock - await provider.getBlockNumber(startDate)) / 30);
-            } else if (timeFrame === '7d') { // Make sure this condition is handled
+                const startBlock = await provider.getBlockNumber(startDate);
+                blocksPerInterval = Math.floor((currentBlock - startBlock) / interval);
+            } else if (timeFrame === '7d') {
                 days = 7;
                 interval = 14; // 7 days with 12-hour intervals
                 blocksPerInterval = blocksPer12Hours;
