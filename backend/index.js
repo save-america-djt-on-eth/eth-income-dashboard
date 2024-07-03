@@ -119,7 +119,7 @@ async function updateCache() {
           endDate = new Date();
           days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
           interval = 30;
-          blocksPerInterval = Math.floor(blocksPerDay * 2);
+          blocksPerInterval = Math.floor((blocksPerDay * days) / interval);
           break;
         default:
           console.error(`Invalid time frame: ${timeFrame}`);
