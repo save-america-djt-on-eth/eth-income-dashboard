@@ -43,11 +43,11 @@ async function updateCache() {
     }
     lastCacheUpdateTime = currentTime;
 
-    const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
+    const address = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
     const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
 
     try {
-        const currentBalance = await provider.getBalance(trumpAddress);
+        const currentBalance = await provider.getBalance(address);
         const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
         const currentBlock = await provider.getBlockNumber();
         const blocksPerDay = 6500;
@@ -83,7 +83,7 @@ async function updateCache() {
             for (let i = interval; i >= 0; i--) {
                 const blockNumber = currentBlock - (i * blocksPerInterval);
                 try {
-                    const balance = await provider.getBalance(trumpAddress, blockNumber);
+                    const balance = await provider.getBalance(address, blockNumber);
                     const ethBalance = parseFloat(ethers.formatEther(balance));
                     supplyChange.push(ethBalance);
                 } catch (error) {
@@ -92,7 +92,7 @@ async function updateCache() {
                 }
             }
 
-            const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
+            const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, address);
 
             const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
 
@@ -109,13 +109,13 @@ async function updateCache() {
             // Compute supplyChange delta
             const supplyDelta = [];
             for (let i = 1; i < supplyChange.length; i++) {
-                supplyDelta.push(supplyChange[i - 1] + (supplyChange[i] - supplyChange[i - 1]));
+                supplyDelta.push(supplyChange[i] - supplyChange[i - 1]);
             }
 
             // Compute cumulativeEthGenerated delta
             const djtDelta = [];
             for (let i = 1; i < cumulativeEthGenerated.length; i++) {
-                djtDelta.push(cumulativeEthGenerated[i - 1] + (cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]));
+                djtDelta.push(cumulativeEthGenerated[i] - cumulativeEthGenerated[i - 1]);
             }
 
             const djtData = generateRandomData(labels.length);
@@ -159,13 +159,8 @@ app.get('/api/data', (req, res) => {
     if (cache[timeFrame]) {
         res.json(cache[timeFrame]);
     } else {
-        console.error(`Invalid time frame requested: ${timeFrame}`);
         res.status(400).json({ error: 'Invalid time frame' });
     }
-});
-
-app.get('/api/cache', (req, res) => {
-    res.json(cache);
 });
 
 async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
