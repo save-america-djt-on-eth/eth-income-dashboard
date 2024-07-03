@@ -43,7 +43,7 @@ async function updateCache() {
     }
     lastCacheUpdateTime = currentTime;
 
-    const address = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
+    consttrumAddress= '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
     const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
 
     try {
