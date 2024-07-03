@@ -126,12 +126,12 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
             }
         },
         series: [{
-            name: 'Total',
+            name: 'Total ETH',
             data: supplyChange,
             color: '#29ABE2',
             visible: false // Hide by default
         }, {
-            name: 'DJT',
+            name: '$DJT Generated ETH',
             data: cumulativeEthGenerated,
             color: '#F15A24'
         }],
