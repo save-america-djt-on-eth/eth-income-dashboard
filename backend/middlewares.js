@@ -1,3 +1,4 @@
+const express = require('express'); // Ensure express is imported
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
