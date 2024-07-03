@@ -11,7 +11,17 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://code.highcharts.com"],
+      styleSrc: ["'self'", "https://code.highcharts.com"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
+    },
+  },
+}));
 
 // Rate limiting middleware
 const limiter = rateLimit({
