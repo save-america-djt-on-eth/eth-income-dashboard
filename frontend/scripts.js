@@ -26,6 +26,10 @@ function fetchData(timeFrame) {
     fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
+            if (data.error) {
+                console.error(`API Data: ${data.error}`);
+                return;
+            }
             console.log("API Data: ", data);
             // Update the chart
             updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, timeFrame);
