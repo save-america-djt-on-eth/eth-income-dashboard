@@ -147,7 +147,7 @@ async function updateCache() {
         const launchDate = new Date('2024-03-21'); // Launch date
         const march23Date = new Date('2024-03-23'); // March 23 date
         const smoothingDataPoints = await generateSmoothingDataPoints(launchDate, march23Date, internalTransactions);
-        internalTransactions.push(...smoothingDataPoints);
+        internalTransactions.unshift(...smoothingDataPoints); // Add at the beginning
       }
 
       // Calculate cumulative ETH generated
@@ -265,11 +265,11 @@ async function generateSmoothingDataPoints(launchDate, march23Date, transactions
   const totalValue = transactions.reduce((total, tx) => total + parseFloat(ethers.formatEther(tx.value.toString())), 0);
   const smoothingValue = totalValue / numberOfDataPoints;
 
-  for (let i = 1; i <= numberOfDataPoints; i++) {
+  for (let i = 0; i <= numberOfDataPoints; i++) { // Include 0 to start from the initial point
     const date = new Date(launchDate.getTime() + (i * (1000 * 60 * 60 * 24)));
     const blockNumber = await dateToBlockNumber(date);
     smoothingDataPoints.push({
-      value: ethers.parseUnits(smoothingValue.toString(), 'ether'),
+      value: ethers.parseUnits((smoothingValue * i).toString(), 'ether'), // Gradually increase
       blockNumber: blockNumber
     });
   }
