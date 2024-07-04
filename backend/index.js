@@ -127,12 +127,16 @@ async function updateCache() {
       }
 
       const supplyChange = [];
+      let ethGeneratedDuringTimeFrame = 0;
       for (let i = interval; i >= 0; i--) {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
           const balance = await provider.getBalance(trumpAddress, blockNumber);
           const ethBalance = parseFloat(ethers.formatEther(balance));
           supplyChange.push(ethBalance);
+          if (i === interval) {
+            ethGeneratedDuringTimeFrame = ethBalance - currentEthBalance;
+          }
         } catch (error) {
           console.error(`Error fetching balance for block ${blockNumber}:`, error);
           supplyChange.push(0);
@@ -161,20 +165,18 @@ async function updateCache() {
       const supplyDelta = calculateDeltas(supplyChange);
       const djtDelta = calculateDeltas(cumulativeEthGenerated);
 
-      // Generate random data for demonstration purposes
-      const djtData = generateRandomData(labels.length);
-      const nftData = generateRandomData(labels.length);
-      const otherData = generateRandomData(labels.length);
+      // Calculate new ETH holdings and DJT generated ETH for the time frame
+      const newEthHoldings = supplyChange[supplyChange.length - 1] - supplyChange[0];
+      const newEthGeneratedDJT = cumulativeEthGenerated[cumulativeEthGenerated.length - 1] - cumulativeEthGenerated[0];
 
       return {
         labels: labels.slice(1), // Remove the first label as we now have deltas
-        djt: djtData,
-        nft: nftData,
-        other: otherData,
         supplyChange: supplyDelta, // Return the deltas
         cumulativeEthGenerated: djtDelta, // Return the deltas
         contractBalance,
-        currentEthTotal: currentEthBalance
+        currentEthTotal: currentEthBalance,
+        newEthHoldings,
+        newEthGeneratedDJT
       };
     };
 
