@@ -17,7 +17,6 @@ function fetchData(timeFrame) {
         activeButton.classList.add("active");
     }
 
-    // Get the current protocol and hostname
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
@@ -31,21 +30,11 @@ function fetchData(timeFrame) {
                 return;
             }
             console.log("API Data: ", data);
-            // Update the chart
             updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, timeFrame);
-
-            // Update the ETH values
-            document.getElementById("total-eth").innerText = data.currentEthTotal.toFixed(4);
-
-            // Ensure contractBalance is a number
-            const contractBalance = parseFloat(data.contractBalance);
-            if (!isNaN(contractBalance)) {
-                document.getElementById("eth-generated-djt").innerText = contractBalance.toFixed(4);
-                const percentage = ((contractBalance / data.currentEthTotal) * 100).toFixed(0);
-                document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
-            } else {
-                console.error("contractBalance is not a valid number");
-            }
+            document.getElementById("total-eth").innerText = data.newEthHoldings.toFixed(4);
+            document.getElementById("eth-generated-djt").innerText = data.newEthGeneratedDJT.toFixed(4);
+            const percentage = ((data.newEthGeneratedDJT / data.newEthHoldings) * 100).toFixed(0);
+            document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
         .catch(error => console.error("Error fetching data: ", error));
 }
