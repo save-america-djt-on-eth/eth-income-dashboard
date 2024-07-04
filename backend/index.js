@@ -155,18 +155,14 @@ async function updateCache() {
       // Generate time labels
       const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
 
-      // Calculate deltas for supply change and cumulative ETH generated
-      const supplyDelta = calculateDeltas(supplyChange);
-      const djtDelta = calculateDeltas(cumulativeEthGenerated);
-
       // Calculate new ETH holdings and DJT generated ETH for the time frame
       const newEthHoldings = supplyChange[supplyChange.length - 1] - supplyChange[0];
       const newEthGeneratedDJT = cumulativeEthGenerated[cumulativeEthGenerated.length - 1] - cumulativeEthGenerated[0];
 
       return {
         labels: labels.slice(1), // Remove the first label as we now have deltas
-        supplyChange: supplyDelta, // Return the deltas
-        cumulativeEthGenerated: djtDelta, // Return the deltas
+        supplyChange: supplyChange, // Return the supply change values
+        cumulativeEthGenerated: cumulativeEthGenerated, // Return the Eth generated values
         contractBalance,
         currentEthTotal: currentEthBalance,
         newEthHoldings,
@@ -287,15 +283,6 @@ function generateCustomTimeLabels(startDate, endDate, interval) {
     labels.push(date.toISOString().split('T')[0]);
   }
   return labels;
-}
-
-// Calculate deltas for supply change and cumulative ETH generated
-function calculateDeltas(dataArray) {
-  const deltas = [];
-  for (let i = 1; i < dataArray.length; i++) {
-    deltas.push(dataArray[i] - dataArray[i - 1]);
-  }
-  return deltas;
 }
 
 // Start the server
