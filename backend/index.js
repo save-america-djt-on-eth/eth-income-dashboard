@@ -1,13 +1,8 @@
-require('dotenv').config();
-const express = require('express');
+const express = require('express'); // Ensure express is imported
 const cors = require('cors');
-const axios = require('axios');
-const { ethers } = require('ethers');
-const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const crypto = require('crypto');
-
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -260,55 +255,45 @@ function calculateCumulativeEthGenerated(transactions, length, currentBlock, blo
     const decimalPart = value.slice(-18).padStart(18, '0');
     const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
     const blockNumber = parseInt(tx.blockNumber);
-
-    for (let i = 0; i < length; i++) {
-      const blockThreshold = currentBlock - ((interval - i) * blocksPerInterval);
-      if (blockNumber <= blockThreshold) {
-        cumulativeEthGenerated[i] += ethValue;
-      }
-    }
+=======
+const applyMiddlewares = (app) => {
+  // Middleware to generate a nonce for CSP
+  app.use((req, res, next) => {
+    res.locals.nonce = crypto.randomBytes(16).toString('base64');
+    next();
   });
-  return cumulativeEthGenerated;
-}
 
-// Generate time labels based on days and interval
-function generateTimeLabels(days, interval) {
-  const labels = [];
-  const today = new Date();
-  const msPerInterval = (days * 24 * 60 * 60 * 1000) / interval;
-  for (let i = interval; i >= 0; i--) {
-    const date = new Date(today.getTime() - (i * msPerInterval));
-    labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
-  }
-  return labels;
-}
+  // Security middleware with CSP including nonce
+  app.use((req, res, next) => {
+    helmet.contentSecurityPolicy({
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://code.highcharts.com", `'nonce-${res.locals.nonce}'`],
+        styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:"],
+        connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
+      },
+    })(req, res, next);
+  });
 
-// Generate custom time labels based on start and end dates
-function generateCustomTimeLabels(startDate, endDate, interval) {
-  const labels = [];
-  const msPerInterval = (endDate - startDate) / interval;
-  for (let i = 0; i <= interval; i++) {
-    const date = new Date(startDate.getTime() + (i * msPerInterval));
-    labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
-  }
-  return labels;
-}
+  // Set 'trust proxy' to specific addresses
+  app.set('trust proxy', '127.0.0.1'); // Change this to your specific proxy address if needed
 
-// Calculate deltas for data
-function calculateDeltas(data) {
-  const deltas = [];
-  for (let i = 1; i < data.length; i++) {
-    deltas.push(data[i - 1] + (data[i] - data[i - 1]));
-  }
-  return deltas;
-}
+  // Rate limiting middleware to limit requests from each IP
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    keyGenerator: (req, res) => req.ip
+  });
+  app.use(limiter);
 
-// Generate random data for demonstration purposes
-function generateRandomData(length) {
-  return Array.from({ length }, () => Math.floor(Math.random() * 100));
-}
+  // Enable CORS for all routes
+  app.use(cors());
 
-// Start the server
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port}`);
-});
+  // Middleware to parse JSON
+  app.use(express.json());
+};
+
+module.exports = { applyMiddlewares };
