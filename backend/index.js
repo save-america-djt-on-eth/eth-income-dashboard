@@ -1,8 +1,11 @@
-const express = require('express'); // Ensure express is imported
+const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const crypto = require('crypto');
+const path = require('path');
+const axios = require('axios');
+const { ethers } = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -122,16 +125,12 @@ async function updateCache() {
       }
 
       const supplyChange = [];
-      let ethGeneratedDuringTimeFrame = 0;
       for (let i = interval; i >= 0; i--) {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
           const balance = await provider.getBalance(trumpAddress, blockNumber);
           const ethBalance = parseFloat(ethers.formatEther(balance));
           supplyChange.push(ethBalance);
-          if (i === interval) {
-            ethGeneratedDuringTimeFrame = ethBalance - currentEthBalance;
-          }
         } catch (error) {
           console.error(`Error fetching balance for block ${blockNumber}:`, error);
           supplyChange.push(0);
@@ -255,45 +254,51 @@ function calculateCumulativeEthGenerated(transactions, length, currentBlock, blo
     const decimalPart = value.slice(-18).padStart(18, '0');
     const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
     const blockNumber = parseInt(tx.blockNumber);
-=======
-const applyMiddlewares = (app) => {
-  // Middleware to generate a nonce for CSP
-  app.use((req, res, next) => {
-    res.locals.nonce = crypto.randomBytes(16).toString('base64');
-    next();
+
+    for (let i = 0; i < length; i++) {
+      const blockDifference = currentBlock - (i * blocksPerInterval);
+      if (blockNumber <= blockDifference) {
+        cumulativeEthGenerated[length - 1 - i] += ethValue;
+      }
+    }
   });
+  return cumulativeEthGenerated;
+}
 
-  // Security middleware with CSP including nonce
-  app.use((req, res, next) => {
-    helmet.contentSecurityPolicy({
-      useDefaults: true,
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "https://code.highcharts.com", `'nonce-${res.locals.nonce}'`],
-        styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:"],
-        connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
-      },
-    })(req, res, next);
-  });
+// Generate time labels
+function generateTimeLabels(days, interval) {
+  const labels = [];
+  const currentDate = new Date();
+  for (let i = interval; i >= 0; i--) {
+    const date = new Date(currentDate);
+    date.setDate(currentDate.getDate() - (days / interval) * i);
+    labels.push(date.toISOString().split('T')[0]);
+  }
+  return labels;
+}
 
-  // Set 'trust proxy' to specific addresses
-  app.set('trust proxy', '127.0.0.1'); // Change this to your specific proxy address if needed
+// Generate custom time labels
+function generateCustomTimeLabels(startDate, endDate, interval) {
+  const labels = [];
+  const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+  for (let i = interval; i >= 0; i--) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + (totalDays / interval) * i);
+    labels.push(date.toISOString().split('T')[0]);
+  }
+  return labels;
+}
 
-  // Rate limiting middleware to limit requests from each IP
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    keyGenerator: (req, res) => req.ip
-  });
-  app.use(limiter);
+// Calculate deltas for supply change and cumulative ETH generated
+function calculateDeltas(dataArray) {
+  const deltas = [];
+  for (let i = 1; i < dataArray.length; i++) {
+    deltas.push(dataArray[i] - dataArray[i - 1]);
+  }
+  return deltas;
+}
 
-  // Enable CORS for all routes
-  app.use(cors());
-
-  // Middleware to parse JSON
-  app.use(express.json());
-};
-
-module.exports = { applyMiddlewares };
+// Start the server
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
