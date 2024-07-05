@@ -95,7 +95,7 @@ async function updateCache() {
       throw new Error('Undefined balance received from Etherscan API');
     }
 
-    const currentEthBalance = ethers.utils.formatEther(currentTrumpBalance);
+    const currentEthBalance = ethers.formatEther(currentTrumpBalance);
     const provider = new ethers.providers.InfuraProvider(); // Ensure provider is defined
     const currentBlock = await provider.getBlockNumber();
 
