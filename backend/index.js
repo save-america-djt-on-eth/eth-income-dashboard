@@ -1,3 +1,4 @@
+// index.js: Server-side JavaScript for handling API requests and processing data
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -91,6 +92,7 @@ async function updateCache() {
 
     const currentTrumpBalance = response.data.result;
     const currentEthBalance = parseFloat(ethers.utils.formatEther(currentTrumpBalance)).toFixed(4);
+    const currentBlock = await provider.getBlockNumber();
 
     // Define block intervals
     const blocksPerDay = 6500;
