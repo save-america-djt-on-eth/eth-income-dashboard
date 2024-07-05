@@ -156,7 +156,7 @@ async function updateCache() {
       const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
 
       // Calculate new ETH holdings and DJT generated ETH for the time frame
-      const newEthGeneratedDJT = cumulativeEthGenerated[cumulativeEthGenerated.length - 1] - cumulativeEthGenerated[0];
+      const newEthHoldings = supplyChange[supplyChange.length - 1] - supplyChange[0];
 
       return {
         labels: labels.slice(1), // Remove the first label as we now have deltas
