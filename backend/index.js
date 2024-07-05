@@ -96,7 +96,7 @@ async function updateCache() {
     }
 
     const currentEthBalance = ethers.formatEther(currentTrumpBalance);
-    const provider = new ethers.providers.InfuraProvider(); // Ensure provider is defined
+    const provider = new ethers.InfuraProvider(); // Ensure provider is defined
     const currentBlock = await provider.getBlockNumber();
 
     // Define block intervals
