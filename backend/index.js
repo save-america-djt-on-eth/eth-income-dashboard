@@ -11,7 +11,10 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-const trumpAddress = process.env.TRUMP_ETH_ADDRESS;
+
+// Ethereum addresses
+const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce'; // Trump's doxxed ETH address
+const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1'; // DJT contractAddress
 
 // Middleware to generate a nonce for CSP
 app.use((req, res, next) => {
@@ -133,7 +136,7 @@ async function updateCache() {
       const ethGeneratedByDJT = [];
 
       // Fetch internal transactions
-      const internalTransactions = await fetchInternalTransactionsEtherscan(trumpAddress);
+      const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
 
       // Calculate cumulative ETH generated
       const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, interval);
@@ -214,13 +217,13 @@ app.get('/api/data', (req, res) => {
 });
 
 // Fetch internal transactions from Etherscan
-async function fetchInternalTransactionsEtherscan(toAddress) {
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
   try {
     const url = `https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`;
     console.log(`Fetching internal transactions from URL: ${url}`);
     const response = await axios.get(url);
     if (response.data.status === "1") {
-      return response.data.result.filter(tx => tx.to.toLowerCase() === toAddress.toLowerCase());
+      return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
     } else {
       console.error(`Etherscan API Error: ${response.data.message}`);
       throw new Error(`Etherscan API Error: ${response.data.message}`);
