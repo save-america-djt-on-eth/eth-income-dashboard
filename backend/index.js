@@ -96,21 +96,25 @@ async function updateCache() {
     // Function to generate data for a specific time frame
     const generateData = async (timeFrame) => {
       let days, interval, blocksPerInterval, startDate, endDate;
+      let labels = [];
       switch (timeFrame) {
         case '1d':
           days = 1;
           interval = 24;
           blocksPerInterval = blocksPerHour;
+          labels = generateTimeLabels(days, interval);
           break;
         case '7d':
           days = 7;
           interval = 28;
           blocksPerInterval = blocksPer6Hours;
+          labels = generateTimeLabels(days, interval);
           break;
         case '30d':
           days = 30;
           interval = 30;
           blocksPerInterval = blocksPerDay;
+          labels = generateTimeLabels(days, interval);
           break;
         case 'custom':
           startDate = new Date('2024-03-20');
@@ -118,6 +122,7 @@ async function updateCache() {
           days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
           interval = 30;
           blocksPerInterval = Math.floor((blocksPerDay * days) / interval);
+          labels = generateCustomTimeLabels(startDate, endDate, interval);
           break;
         default:
           console.error(`Invalid time frame: ${timeFrame}`);
