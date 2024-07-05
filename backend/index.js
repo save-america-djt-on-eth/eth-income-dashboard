@@ -1,10 +1,3 @@
-const express = require('express');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
-const crypto = require('crypto');
-const path = require('path');
-const axios = require('axios');
 const { ethers } = require('ethers');
 require('dotenv').config();
 
