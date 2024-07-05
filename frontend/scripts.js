@@ -30,7 +30,7 @@ function fetchData(timeFrame) {
                 return;
             }
             console.log("API Data: ", data);
-            updateChart(data.labels, data.ethAddedNonDJT, data.ethGeneratedByDJT, timeFrame);
+            updateChart(data.labels, data.ethAddedDuringTimeFrame, data.ethGeneratedByDJT, timeFrame);
             document.getElementById("total-eth").innerText = data.newEthHoldings.toFixed(4);
             document.getElementById("eth-generated-djt").innerText = data.newEthGeneratedDJT.toFixed(4);
             const percentage = ((data.newEthGeneratedDJT / data.newEthHoldings) * 100).toFixed(0);
@@ -39,8 +39,8 @@ function fetchData(timeFrame) {
         .catch(error => console.error("Error fetching data: ", error));
 }
 
-function updateChart(labels, ethAddedNonDJT, ethGeneratedByDJT, timeFrame) {
-    const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : `ETH Generated in the Last ${timeFrame.toUpperCase()}`;
+function updateChart(labels, ethAddedDuringTimeFrame, ethGeneratedByDJT, timeFrame) {
+    const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
 
     Highcharts.chart('myChart', {
         chart: {
@@ -88,7 +88,7 @@ function updateChart(labels, ethAddedNonDJT, ethGeneratedByDJT, timeFrame) {
             tickColor: '#707073',
             tickWidth: 1,
             title: {
-                text: 'ETH',
+                text: '',
                 style: {
                     color: '#A0A0A3'
                 }
@@ -125,12 +125,12 @@ function updateChart(labels, ethAddedNonDJT, ethGeneratedByDJT, timeFrame) {
             }
         },
         series: [{
-            name: 'Total ETH Added (excluding DJT)',
-            data: ethAddedNonDJT, // Updated to use ethAddedNonDJT
-            color: '#29ABE2',
+            name: 'Total ETH Added (Excluding DJT)',
+            data: ethAddedDuringTimeFrame,
+            color: '#29ABE2'
         }, {
             name: '$DJT Generated ETH',
-            data: ethGeneratedByDJT, // Updated to use ethGeneratedByDJT
+            data: ethGeneratedByDJT,
             color: '#F15A24'
         }],
         legend: {
