@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const crypto = require('crypto');
 const path = require('path');
 const axios = require('axios');
-const { ethers } = require('ethers');
+const { ethers } = require('ethers'); // Ensure ethers is correctly imported
 require('dotenv').config();
 
 const app = express();
@@ -92,6 +92,7 @@ async function updateCache() {
 
     const currentTrumpBalance = response.data.result;
     const currentEthBalance = parseFloat(ethers.utils.formatEther(currentTrumpBalance)).toFixed(4);
+    const provider = new ethers.providers.InfuraProvider(); // Add this line if you missed defining provider
     const currentBlock = await provider.getBlockNumber();
 
     // Define block intervals
