@@ -11,6 +11,7 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+const providerUrl = process.env.PROVIDER_URL; // Add your provider URL to the .env file
 
 // Ethereum addresses
 const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce'; // Trump's doxxed ETH address
@@ -96,7 +97,7 @@ async function updateCache() {
     }
 
     const currentEthBalance = ethers.formatUnits(currentTrumpBalance, 'ether');
-    const provider = new ethers.JsonRpcProvider(); // Ensure provider is defined
+    const provider = new ethers.JsonRpcProvider(providerUrl); // Use the provider URL from environment variables
     const currentBlock = await provider.getBlockNumber();
 
     // Define block intervals
