@@ -1,4 +1,3 @@
-// index.js: Server-side JavaScript for handling API requests and processing data
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -26,7 +25,7 @@ app.use((req, res, next) => {
       styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
+      connectSrc: ["'self'", "https://api.etherscan.io"],
     },
   })(req, res, next);
 });
@@ -53,10 +52,9 @@ app.use(express.json());
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Use the Infura API key from .env file
-const infuraApiKey = process.env.INFURA_API_KEY;
-const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
-console.log(`Using provider URL: ${providerUrl}`);
+// Use the Etherscan API key from .env file
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+const providerUrl = `https://api.etherscan.io/api?module=account&action=balance&address=YOUR_ETH_ADDRESS&tag=latest&apikey=${etherscanApiKey}`;
 
 const provider = new ethers.JsonRpcProvider(providerUrl);
 
