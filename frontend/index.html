@@ -4,26 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Donald J. Trump ETH Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Unica+One&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="dashboard">
+    <div class="container">
         <h1>Donald J. Trump ETH Dashboard</h1>
-        <div id="chart">
-            <canvas id="ethChart"></canvas>
+        <div id="chart-container">
+            <div id="myChart" style="height: 400px;"></div>
         </div>
-        <div id="stats">
-            <p>Trump's ETH income: <span id="trumpEthIncome">0</span></p>
-            <p>Trump's ETH Income ($DJT Generated): <span id="trumpDjtIncome">0</span></p>
-            <p>Percent of Income from $DJT on ETH: <span id="percentIncome">0%</span></p>
+        <div class="metrics">
+            <div id="eth-total">
+                Trump's ETH income: <span id="total-eth">0</span>
+            </div>
+            <div id="eth-djt">
+                Trump's ETH Income ($DJT Generated): <span id="eth-generated-djt">0</span>
+            </div>
+            <div id="eth-percentage">
+                Percent of Income from $DJT on ETH: <span id="eth-percentage-value">0%</span>
+            </div>
         </div>
-        <div id="buttons">
-            <button id="1d" onclick="fetchData('1d')">1D</button>
-            <button id="7d" onclick="fetchData('7d')">7D</button>
-            <button id="30d" onclick="fetchData('30d')">30D</button>
-            <button id="all" onclick="fetchData('all')">All</button>
+        <div id="time-frame-buttons">
+            <button id="btn-1d">1D</button>
+            <button id="btn-7d">7D</button>
+            <button id="btn-30d">30D</button>
+            <button id="btn-custom">
+                <img src="greyscale-djt.ico" alt="Custom" style="width: 20px; height: 20px; vertical-align: middle;">
+            </button>
         </div>
     </div>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
     <script src="scripts.js"></script>
 </body>
 </html>
