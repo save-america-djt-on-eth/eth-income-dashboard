@@ -30,7 +30,7 @@ function fetchData(timeFrame) {
                 return;
             }
             console.log("API Data: ", data);
-            updateChart(data.labels, data.trumpEtherTotal, data.cumulativeEthGenerated, timeFrame); // Updated to use trumpEtherTotal
+            updateChart(data.labels, data.ethAddedDuringTimeFrame, data.ethGeneratedByDJT, timeFrame);
             document.getElementById("total-eth").innerText = data.newEthHoldings.toFixed(4);
             document.getElementById("eth-generated-djt").innerText = data.newEthGeneratedDJT.toFixed(4);
             const percentage = ((data.newEthGeneratedDJT / data.newEthHoldings) * 100).toFixed(0);
@@ -39,7 +39,7 @@ function fetchData(timeFrame) {
         .catch(error => console.error("Error fetching data: ", error));
 }
 
-function updateChart(labels, trumpEtherTotal, cumulativeEthGenerated, timeFrame) {
+function updateChart(labels, ethAddedDuringTimeFrame, ethGeneratedByDJT, timeFrame) {
     const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : `ETH Generated in the Last ${timeFrame.toUpperCase()}`;
 
     Highcharts.chart('myChart', {
@@ -125,12 +125,12 @@ function updateChart(labels, trumpEtherTotal, cumulativeEthGenerated, timeFrame)
             }
         },
         series: [{
-            name: 'Total ETH',
-            data: trumpEtherTotal, // Updated to use trumpEtherTotal
+            name: 'Total ETH Added',
+            data: ethAddedDuringTimeFrame, // Updated to use ethAddedDuringTimeFrame
             color: '#29ABE2',
         }, {
             name: '$DJT Generated ETH',
-            data: cumulativeEthGenerated,
+            data: ethGeneratedByDJT, // Updated to use ethGeneratedByDJT
             color: '#F15A24'
         }],
         legend: {
