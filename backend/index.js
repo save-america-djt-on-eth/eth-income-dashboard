@@ -124,19 +124,7 @@ async function updateCache() {
           throw new Error('Invalid time frame');
       }
 
-      const supplyChange = [];
-      for (let i = interval; i >= 0; i--) {
-        const blockNumber = currentBlock - (i * blocksPerInterval);
-        try {
-          const balance = await provider.getBalance(trumpAddress, blockNumber);
-          const ethBalance = parseFloat(ethers.formatEther(balance));
-          supplyChange.push(ethBalance);
-        } catch (error) {
-          console.error(`Error fetching balance for block ${blockNumber}:`, error);
-          supplyChange.push(0);
-        }
-      }
-
+	  const Trumpbalance = await provider.getBalance(trumpAddress, blockNumber);
       // Fetch internal transactions
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
 
@@ -156,12 +144,11 @@ async function updateCache() {
       const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
 
       // Calculate new ETH holdings and DJT generated ETH for the time frame
-      const newEthHoldings = supplyChange[supplyChange.length - 1] - supplyChange[0];
       const newEthGeneratedDJT = cumulativeEthGenerated[cumulativeEthGenerated.length - 1] - cumulativeEthGenerated[0];
 
       return {
         labels: labels.slice(1), // Remove the first label as we now have deltas
-        supplyChange: supplyChange, // Return the supply change values
+        supplyChange: Trumpbalance, // Return the supply change values
         cumulativeEthGenerated: cumulativeEthGenerated, // Return the Eth generated values
         contractBalance,
         currentEthTotal: currentEthBalance,
