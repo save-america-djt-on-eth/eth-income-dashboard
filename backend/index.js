@@ -84,8 +84,8 @@ async function updateCache() {
 
   try {
     // Fetch current balance of Trump's address
-    const currentBalance = await provider.getBalance(trumpAddress);
-    const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
+    const currentTrumpBalance = await provider.getBalance(trumpAddress);
+    const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentTrumpBalance)).toFixed(4));
     const currentBlock = await provider.getBlockNumber();
 
     // Define block intervals
@@ -124,16 +124,16 @@ async function updateCache() {
           throw new Error('Invalid time frame');
       }
 
-      const supplyChange = [];
+      const trumpEtherTotal = [];
       for (let i = interval; i >= 0; i--) {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
           const balance = await provider.getBalance(trumpAddress, blockNumber);
           const ethBalance = parseFloat(ethers.formatEther(balance));
-          supplyChange.push(ethBalance);
+          trumpEtherTotal.push(ethBalance);
         } catch (error) {
           console.error(`Error fetching balance for block ${blockNumber}:`, error);
-          supplyChange.push(0);
+          trumpEtherTotal.push(0);
         }
       }
 
@@ -141,10 +141,10 @@ async function updateCache() {
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
 
       // Calculate cumulative ETH generated
-      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
+      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, trumpEtherTotal.length, currentBlock, blocksPerInterval, interval);
 
       // Calculate contract balance
-      const contractBalance = internalTransactions.reduce((total, tx) => {
+      const generatedEth = internalTransactions.reduce((total, tx) => {
         const value = tx.value.toString();
         const integerPart = value.slice(0, -18) || '0';
         const decimalPart = value.slice(-18).padStart(18, '0');
@@ -156,13 +156,14 @@ async function updateCache() {
       const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
 
       // Calculate new ETH holdings and DJT generated ETH for the time frame
-      const newEthHoldings = supplyChange[supplyChange.length - 1] - supplyChange[0];
+      const newEthHoldings = trumpEtherTotal[trumpEtherTotal.length - 1] - trumpEtherTotal[0];
+      const newEthGeneratedDJT = cumulativeEthGenerated[cumulativeEthGenerated.length - 1] - cumulativeEthGenerated[0];
 
       return {
-        labels: labels.slice(1), // Remove the first label as we now have deltas
-        supplyChange: supplyChange, // Return the supply change values
-        cumulativeEthGenerated: cumulativeEthGenerated, // Return the Eth generated values
-        contractBalance,
+        labels, // Keep all labels for better comparison
+        trumpEtherTotal,
+        cumulativeEthGenerated,
+        generatedEth,
         currentEthTotal: currentEthBalance,
         newEthHoldings,
         newEthGeneratedDJT
