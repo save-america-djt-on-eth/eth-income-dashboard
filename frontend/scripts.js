@@ -30,7 +30,7 @@ function fetchData(timeFrame) {
                 return;
             }
             console.log("API Data: ", data);
-            updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, timeFrame);
+            updateChart(data.labels, data.trumpEtherTotal, data.cumulativeEthGenerated, timeFrame); // Updated to use trumpEtherTotal
             document.getElementById("total-eth").innerText = data.newEthHoldings.toFixed(4);
             document.getElementById("eth-generated-djt").innerText = data.newEthGeneratedDJT.toFixed(4);
             const percentage = ((data.newEthGeneratedDJT / data.newEthHoldings) * 100).toFixed(0);
@@ -39,8 +39,8 @@ function fetchData(timeFrame) {
         .catch(error => console.error("Error fetching data: ", error));
 }
 
-function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
-    const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
+function updateChart(labels, trumpEtherTotal, cumulativeEthGenerated, timeFrame) {
+    const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : `ETH Generated in the Last ${timeFrame.toUpperCase()}`;
 
     Highcharts.chart('myChart', {
         chart: {
@@ -88,7 +88,7 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
             tickColor: '#707073',
             tickWidth: 1,
             title: {
-                text: '',
+                text: 'ETH',
                 style: {
                     color: '#A0A0A3'
                 }
@@ -126,9 +126,8 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
         },
         series: [{
             name: 'Total ETH',
-            data: supplyChange,
+            data: trumpEtherTotal, // Updated to use trumpEtherTotal
             color: '#29ABE2',
-            visible: false // Hide by default
         }, {
             name: '$DJT Generated ETH',
             data: cumulativeEthGenerated,
