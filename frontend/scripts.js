@@ -31,9 +31,9 @@ function fetchData(timeFrame) {
             }
             console.log("API Data: ", data);
             updateChart(data.labels, data.ethAddedDuringTimeFrame, data.ethGeneratedByDJT, timeFrame);
-            document.getElementById("total-eth").innerText = parseFloat(data.currentEthTotal).toFixed(4);
-            document.getElementById("eth-generated-djt").innerText = parseFloat(data.newEthGeneratedDJT[data.newEthGeneratedDJT.length - 1]).toFixed(4);
-            const percentage = ((data.newEthGeneratedDJT[data.newEthGeneratedDJT.length - 1] / data.currentEthTotal) * 100).toFixed(2);
+            document.getElementById("total-eth").innerText = data.newEthHoldings.toFixed(4);
+            document.getElementById("eth-generated-djt").innerText = data.newEthGeneratedDJT.toFixed(4);
+            const percentage = ((data.newEthGeneratedDJT / data.newEthHoldings) * 100).toFixed(0);
             document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
         .catch(error => console.error("Error fetching data: ", error));
