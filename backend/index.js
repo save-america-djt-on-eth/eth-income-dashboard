@@ -161,6 +161,19 @@ async function updateCache() {
         }
       });
 
+      // Calculate cumulative values
+      let cumulativeEthAddedNonDJT = 0;
+      ethAddedDuringTimeFrame.forEach((value, index) => {
+        cumulativeEthAddedNonDJT += value;
+        ethAddedDuringTimeFrame[index] = cumulativeEthAddedNonDJT;
+      });
+
+      let cumulativeEthGenerated = 0;
+      ethGeneratedByDJT.forEach((value, index) => {
+        cumulativeEthGenerated += value;
+        ethGeneratedByDJT[index] = cumulativeEthGenerated;
+      });
+
       // Calculate contract balance
       const generatedEth = internalTransactions.reduce((total, tx) => {
         const value = tx.value.toString();
@@ -233,7 +246,7 @@ app.get('/api/cache', (req, res) => {
 });
 
 // Fetch internal transactions from Etherscan
-async function fetchInternalTransactionsEtherscan(fromAddress, toAddress, retries = 3) {
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
   const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
   try {
     const response = await axios.get('https://api.etherscan.io/api', {
@@ -255,13 +268,7 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress, retrie
     }
   } catch (error) {
     console.error('Error fetching internal transactions from Etherscan:', error);
-
-    if (retries > 0) {
-      console.log(`Retrying... (${retries} attempts left)`);
-      return fetchInternalTransactionsEtherscan(fromAddress, toAddress, retries - 1);
-    } else {
-      throw new Error('Failed to fetch internal transactions from Etherscan after multiple attempts');
-    }
+    return [];
   }
 }
 
