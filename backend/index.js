@@ -77,17 +77,12 @@ async function updateCache() {
 
   try {
     // Fetch current balance of Trump's address
-    const response = await axios.get('https://api.etherscan.io/api', {
-      params: {
-        module: 'account',
-        action: 'balance',
-        address: trumpAddress,
-        tag: 'latest',
-        apikey: etherscanApiKey
-      }
-    });
+    const url = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=latest&apikey=${etherscanApiKey}`;
+    console.log(`Fetching balance from URL: ${url}`);
+    const response = await axios.get(url);
 
     if (response.data.status !== "1") {
+      console.error(`Etherscan API Error: ${response.data.message}`);
       throw new Error(`Etherscan API Error: ${response.data.message}`);
     }
 
@@ -221,20 +216,13 @@ app.get('/api/data', (req, res) => {
 // Fetch internal transactions from Etherscan
 async function fetchInternalTransactionsEtherscan(toAddress) {
   try {
-    const response = await axios.get('https://api.etherscan.io/api', {
-      params: {
-        module: 'account',
-        action: 'txlistinternal',
-        address: toAddress,
-        startblock: 0,
-        endblock: 'latest',
-        sort: 'asc',
-        apikey: etherscanApiKey
-      }
-    });
+    const url = `https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`;
+    console.log(`Fetching internal transactions from URL: ${url}`);
+    const response = await axios.get(url);
     if (response.data.status === "1") {
       return response.data.result.filter(tx => tx.to.toLowerCase() === toAddress.toLowerCase());
     } else {
+      console.error(`Etherscan API Error: ${response.data.message}`);
       throw new Error(`Etherscan API Error: ${response.data.message}`);
     }
   } catch (error) {
