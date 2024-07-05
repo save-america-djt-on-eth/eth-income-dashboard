@@ -161,23 +161,7 @@ async function updateCache() {
         }
       });
 
-      // Calculate contract balance
-      const generatedEth = internalTransactions.reduce((total, tx) => {
-        const value = tx.value.toString();
-        const integerPart = value.slice(0, -18) || '0';
-        const decimalPart = value.slice(-18).padStart(18, '0');
-        const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
-        return total + formattedValue;
-      }, 0).toFixed(4);
-
-      // Generate time labels
-      const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
-
-      // Calculate new ETH holdings and DJT generated ETH for the time frame
-      const newEthHoldings = trumpEtherTotal[trumpEtherTotal.length - 1] - trumpEtherTotal[0];
-      const newEthGeneratedDJT = cumulativeEthGenerated[cumulativeEthGenerated.length - 1] - cumulativeEthGenerated[0];
-
-      // Make ETH values cumulative
+      // Make ETH values cumulative and adjust starting point
       const cumulativeEthAddedDuringTimeFrame = ethAddedDuringTimeFrame.reduce((acc, value, index) => {
         if (index === 0) {
           acc.push(value);
@@ -188,7 +172,7 @@ async function updateCache() {
       }, []);
       const cumulativeEthGeneratedByDJT = ethGeneratedByDJT.reduce((acc, value, index) => {
         if (index === 0) {
-          acc.push(value);
+          acc.push(0); // Start with 0
         } else {
           acc.push(acc[index - 1] + value);
         }
