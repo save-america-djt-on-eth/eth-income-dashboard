@@ -1,3 +1,4 @@
+// index.js: Server-side JavaScript for handling API requests and processing data
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -6,15 +7,8 @@ const crypto = require('crypto');
 const path = require('path');
 const axios = require('axios');
 const { ethers } = require('ethers');
-require('dotenv').config();
-
 const app = express();
 const port = process.env.PORT || 3000;
-const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-
-// Ethereum addresses
-const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce'; // Trump's doxxed ETH address
-const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1'; // DJT contractAddress
 
 // Middleware to generate a nonce for CSP
 app.use((req, res, next) => {
@@ -32,7 +26,7 @@ app.use((req, res, next) => {
       styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "https://api.etherscan.io"],
+      connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
     },
   })(req, res, next);
 });
@@ -59,6 +53,13 @@ app.use(express.json());
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
 
+// Use the Infura API key from .env file
+const infuraApiKey = process.env.INFURA_API_KEY;
+const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
+console.log(`Using provider URL: ${providerUrl}`);
+
+const provider = new ethers.JsonRpcProvider(providerUrl);
+
 // Cache object to store data
 let cache = {
   '1d': null,
@@ -78,26 +79,22 @@ async function updateCache() {
   }
   lastCacheUpdateTime = currentTime;
 
+  // Ethereum addresses
+  const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
+  const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
+
   try {
     // Fetch current balance of Trump's address
-    const url = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=latest&apikey=${etherscanApiKey}`;
-    console.log(`Fetching balance from URL: ${url}`);
-    const response = await axios.get(url);
-
-    if (response.data.status !== "1") {
-      console.error(`Etherscan API Error: ${response.data.message}`);
-      throw new Error(`Etherscan API Error: ${response.data.message}`);
-    }
-
-    const currentTrumpBalance = response.data.result;
-    const currentEthBalance = parseFloat(ethers.utils.formatEther(currentTrumpBalance)).toFixed(4);
+    const currentTrumpBalance = await provider.getBalance(trumpAddress);
+    const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentTrumpBalance)).toFixed(4));
+    const currentBlock = await provider.getBlockNumber();
 
     // Define block intervals
     const blocksPerDay = 6500;
     const blocksPerHour = Math.round(blocksPerDay / 24);
     const blocksPer6Hours = Math.round(blocksPerDay / 4);
 
-    // Generate data for a specific time frame
+    // Function to generate data for a specific time frame
     const generateData = async (timeFrame) => {
       let days, interval, blocksPerInterval, startDate, endDate;
       let labels = [];
@@ -129,17 +126,37 @@ async function updateCache() {
           labels = generateCustomTimeLabels(startDate, endDate, interval);
           break;
         default:
+          console.error(`Invalid time frame: ${timeFrame}`);
           throw new Error('Invalid time frame');
       }
 
+      const trumpEtherTotal = [];
       const ethAddedDuringTimeFrame = [];
       const ethGeneratedByDJT = [];
+
+      for (let i = interval; i >= 0; i--) {
+        const blockNumber = currentBlock - (i * blocksPerInterval);
+        try {
+          const balance = await provider.getBalance(trumpAddress, blockNumber);
+          const ethBalance = parseFloat(ethers.formatEther(balance));
+          trumpEtherTotal.push(ethBalance);
+
+          // Calculate ETH added during the timeframe
+          const previousBalance = i < interval ? trumpEtherTotal[trumpEtherTotal.length - 2] : ethBalance;
+          const ethAdded = ethBalance - previousBalance;
+          ethAddedDuringTimeFrame.push(ethAdded);
+        } catch (error) {
+          console.error(`Error fetching balance for block ${blockNumber}:`, error);
+          trumpEtherTotal.push(0);
+          ethAddedDuringTimeFrame.push(0);
+        }
+      }
 
       // Fetch internal transactions
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
 
       // Calculate cumulative ETH generated
-      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, interval);
+      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, trumpEtherTotal.length, currentBlock, blocksPerInterval, interval);
 
       // Calculate ETH generated by DJT during the timeframe
       cumulativeEthGenerated.forEach((value, index) => {
@@ -169,9 +186,9 @@ async function updateCache() {
       }, []);
 
       return {
-        labels,
-        ethAddedDuringTimeFrame: cumulativeEthAddedDuringTimeFrame,
-        ethGeneratedByDJT: cumulativeEthGeneratedByDJT,
+        labels, // Keep all labels for better comparison
+        ethAddedDuringTimeFrame: cumulativeEthAddedDuringTimeFrame, // New total ETH added during the timeframe
+        ethGeneratedByDJT: cumulativeEthGeneratedByDJT, // New ETH generated by DJT during the timeframe
         currentEthTotal: currentEthBalance,
         newEthHoldings: ethAddedDuringTimeFrame,
         newEthGeneratedDJT: cumulativeEthGeneratedByDJT
@@ -212,21 +229,36 @@ app.get('/api/data', (req, res) => {
       res.json(cache[timeFrame]);
     }
   } else {
+    console.error(`Invalid time frame requested: ${timeFrame}`);
     res.status(400).json({ error: 'Invalid time frame' });
   }
 });
 
+// API endpoint to fetch the current cache state
+app.get('/api/cache', (req, res) => {
+  res.json(cache);
+});
+
 // Fetch internal transactions from Etherscan
 async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
+  const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
   try {
-    const url = `https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`;
-    console.log(`Fetching internal transactions from URL: ${url}`);
-    const response = await axios.get(url);
+    const response = await axios.get('https://api.etherscan.io/api', {
+      params: {
+        module: 'account',
+        action: 'txlistinternal',
+        address: toAddress,
+        startblock: 0,
+        endblock: 'latest',
+        sort: 'asc',
+        apikey: etherscanApiKey
+      }
+    });
     if (response.data.status === "1") {
       return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
     } else {
-      console.error(`Etherscan API Error: ${response.data.message}`);
-      throw new Error(`Etherscan API Error: ${response.data.message}`);
+      console.error('Etherscan API Error:', response.data.message);
+      return [];
     }
   } catch (error) {
     console.error('Error fetching internal transactions from Etherscan:', error);
@@ -235,16 +267,21 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
 }
 
 // Calculate cumulative ETH generated from transactions
-function calculateCumulativeEthGenerated(transactions, interval) {
-  const cumulativeEthGenerated = new Array(interval + 1).fill(0);
+function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerInterval, interval) {
+  const cumulativeEthGenerated = new Array(length).fill(0);
   transactions.forEach(tx => {
     const value = tx.value.toString();
     const integerPart = value.slice(0, -18) || '0';
     const decimalPart = value.slice(-18).padStart(18, '0');
     const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
-    cumulativeEthGenerated.forEach((_, index) => {
-      cumulativeEthGenerated[index] += ethValue;
-    });
+    const blockNumber = parseInt(tx.blockNumber);
+
+    for (let i = 0; i < length; i++) {
+      const blockDifference = currentBlock - (i * blocksPerInterval);
+      if (blockNumber <= blockDifference) {
+        cumulativeEthGenerated[length - 1 - i] += ethValue;
+      }
+    }
   });
   return cumulativeEthGenerated;
 }
