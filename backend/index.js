@@ -145,11 +145,6 @@ async function updateCache() {
       // Calculate cumulative ETH generated
       const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, trumpEtherTotal.length, currentBlock, blocksPerInterval, interval);
 
-      // Make ethGeneratedByDJT cumulative
-      for (let i = 1; i < cumulativeEthGenerated.length; i++) {
-        cumulativeEthGenerated[i] += cumulativeEthGenerated[i - 1];
-      }
-
       // Calculate non-DJT ETH added during the timeframe
       const ethAddedNonDJT = trumpEtherTotal.map((total, index) => {
         return total - cumulativeEthGenerated[index];
@@ -268,18 +263,6 @@ function generateTimeLabels(days, interval) {
   for (let i = interval; i >= 0; i--) {
     const date = new Date(currentDate);
     date.setDate(currentDate.getDate() - (days / interval) * i);
-    labels.push(date.toISOString().split('T')[0]);
-  }
-  return labels;
-}
-
-// Generate custom time labels
-function generateCustomTimeLabels(startDate, endDate, interval) {
-  const labels = [];
-  const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-  for (let i = interval; i >= 0; i--) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + (totalDays / interval) * i);
     labels.push(date.toISOString().split('T')[0]);
   }
   return labels;
