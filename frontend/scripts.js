@@ -1,3 +1,4 @@
+// scripts.js: Contains the client-side JavaScript for fetching and displaying data
 document.addEventListener("DOMContentLoaded", function () {
     fetchData('7d'); // Default time frame
 
