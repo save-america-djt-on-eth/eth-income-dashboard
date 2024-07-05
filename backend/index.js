@@ -179,11 +179,19 @@ async function updateCache() {
 
       // Make ETH values cumulative
       const cumulativeEthAddedDuringTimeFrame = ethAddedDuringTimeFrame.reduce((acc, value, index) => {
-        acc.push((acc[index - 1] || 0) + value);
+        if (index === 0) {
+          acc.push(value);
+        } else {
+          acc.push(acc[index - 1] + value);
+        }
         return acc;
       }, []);
       const cumulativeEthGeneratedByDJT = ethGeneratedByDJT.reduce((acc, value, index) => {
-        acc.push((acc[index - 1] || 0) + value);
+        if (index === 0) {
+          acc.push(value);
+        } else {
+          acc.push(acc[index - 1] + value);
+        }
         return acc;
       }, []);
 
