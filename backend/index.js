@@ -176,6 +176,11 @@ async function updateCache() {
         ethGeneratedByDJT[i] += ethGeneratedByDJT[i - 1];
       }
 
+      // Make ethAddedNonDJT cumulative
+      for (let i = 1; i < ethAddedNonDJT.length; i++) {
+        ethAddedNonDJT[i] += ethAddedNonDJT[i - 1];
+      }
+
       return {
         labels, // Keep all labels for better comparison
         ethAddedNonDJT: ethAddedNonDJT.slice(1), // Exclude the first value
