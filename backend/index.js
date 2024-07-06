@@ -176,6 +176,11 @@ async function updateCache() {
         }
       }
 
+      // Make supplyChange cumulative
+      for (let i = 1; i < supplyChange.length; i++) {
+        supplyChange[i] += supplyChange[i - 1];
+      }
+
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
       const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, startBlock, blocksPerInterval, interval);
 
