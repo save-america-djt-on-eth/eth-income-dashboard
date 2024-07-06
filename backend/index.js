@@ -65,6 +65,8 @@ const provider = new ethers.JsonRpcProvider(providerUrl);
 const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce'; // Trump's doxxed ETH address
 const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1'; // DJT contract address
 
+const startingEthBalance = parseFloat(process.env.STARTING_ETH_BALANCE || '0');
+
 // Cache object to store data
 let cache = {
   '1d': null,
@@ -156,7 +158,7 @@ async function updateCache() {
       // Make ETH values cumulative and adjust starting point
       const cumulativeEthAddedDuringTimeFrame = trumpEtherIncomeDuringTimeFrame.reduce((acc, value, index) => {
         if (index === 0) {
-          acc.push(parseFloat(startingEthBalance)); // Start with the initial balance
+          acc.push(startingEthBalance); // Start with the initial balance
         } else {
           acc.push(acc[index - 1] + (value - trumpEtherIncomeDuringTimeFrame[index - 1]));
         }
@@ -175,7 +177,7 @@ async function updateCache() {
         labels,
         trumpEtherIncomeDuringTimeFrame: cumulativeEthAddedDuringTimeFrame,
         etherIncomeFromContract: cumulativeEthGeneratedByDJTFinal,
-        trumpTotalEther: currentEthBalance,
+        trumpTotalEther: trumpEtherIncomeDuringTimeFrame[trumpEtherIncomeDuringTimeFrame.length - 1],
         totalEtherFromDJT: cumulativeEthGeneratedByDJTFinal
       };
     };
