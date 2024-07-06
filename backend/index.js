@@ -69,6 +69,32 @@ let cache = {
 let lastCacheUpdateTime = 0;
 const cacheDuration = 1800000; // 30 minutes
 
+// Helper function to get Unix timestamp
+const getUnixTimestamp = date => Math.floor(new Date(date).getTime() / 1000);
+
+// Function to return historic block number
+async function returnHistoricBlock(date) {
+  const unixTime = getUnixTimestamp(date);
+  const apiCall = `https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${unixTime}&closest=before&apikey=${etherscanApiKey}`;
+  const response = await axios.get(apiCall);
+  return response.data.result;
+}
+
+// Function to return historic balance
+async function returnHistoricBalance(date, ethAddress) {
+  const historicBlock = await returnHistoricBlock(date);
+  const apiCall = `https://api.etherscan.io/api?module=account&action=balancehistory&address=${ethAddress}&blockno=${historicBlock}&apikey=${etherscanApiKey}`;
+  const response = await axios.get(apiCall);
+  return response.data.result;
+}
+
+// Function to fetch internal transactions from Etherscan
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress, startBlock, endBlock) {
+  const apiCall = `https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=${startBlock}&endblock=${endBlock}&sort=asc&apikey=${etherscanApiKey}`;
+  const response = await axios.get(apiCall);
+  return response.data.result;
+}
+
 // Function to update the cache
 async function updateCache() {
   const currentTime = Date.now();
@@ -84,15 +110,9 @@ async function updateCache() {
 
   try {
     // Fetch current block number
-    const blockResponse = await axios.get(`https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`);
-    await wait(200);
-    const currentBlock = parseInt(blockResponse.data.result, 16);
-
+    const currentBlock = await returnHistoricBlock(new Date());
     // Fetch current balance of Trump's address
-    const currentBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&apikey=${etherscanApiKey}`);
-    await wait(200);
-    const currentEthBalance = parseFloat(ethers.formatEther(currentBalanceResponse.data.result)).toFixed(4);
-
+    const currentEthBalance = await returnHistoricBalance(new Date(), trumpAddress);
     // Define block intervals
     const blocksPerDay = 6500;
     const blocksPerHour = Math.round(blocksPerDay / 24);
@@ -130,32 +150,26 @@ async function updateCache() {
       }
 
       const supplyChange = [];
+      const labels = [];
       let previousBalance = null;
 
       for (let i = interval; i >= 0; i--) {
-        const blockNumber = currentBlock - (i * blocksPerInterval);
-        try {
-          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`);
-          await wait(200);
-          if (balanceResponse.data.result) {
-            const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
-            if (previousBalance !== null) {
-              supplyChange.push(previousBalance - ethBalance);
-            }
-            previousBalance = ethBalance;
-          } else {
-            console.error(`Invalid response for block ${blockNumber}:`, balanceResponse.data);
-            supplyChange.push(0);
-          }
-        } catch (error) {
-          console.error(`Error fetching balance for block ${blockNumber}:`, error);
-          supplyChange.push(0);
+        const date = new Date(new Date().getTime() - (i * (days * 24 * 60 * 60 * 1000) / interval));
+        const ethBalance = await returnHistoricBalance(date, trumpAddress);
+        labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
+        if (previousBalance !== null) {
+          supplyChange.push(previousBalance - ethBalance);
         }
+        previousBalance = ethBalance;
       }
 
-      const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
+      const startBlock = await returnHistoricBlock(startDate);
+      const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress, startBlock, currentBlock);
+
+      // Calculate cumulative ETH generated
       const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
 
+      // Calculate contract balance
       const contractBalance = internalTransactions.reduce((total, tx) => {
         const value = tx.value.toString();
         const integerPart = value.slice(0, -18) || '0';
@@ -163,8 +177,6 @@ async function updateCache() {
         const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
         return total + formattedValue;
       }, 0).toFixed(4);
-
-      const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
 
       const supplyDelta = calculateDeltas(supplyChange);
       const djtDelta = calculateDeltas(cumulativeEthGenerated);
@@ -230,30 +242,10 @@ app.get('/api/cache', (req, res) => {
 });
 
 // Fetch internal transactions from Etherscan
-async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
-  try {
-    const response = await axios.get('https://api.etherscan.io/api', {
-      params: {
-        module: 'account',
-        action: 'txlistinternal',
-        address: toAddress,
-        startblock: 0,
-        endblock: 'latest',
-        sort: 'asc',
-        apikey: etherscanApiKey
-      }
-    });
-    await wait(200);
-    if (response.data.status === "1") {
-      return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
-    } else {
-      console.error('Etherscan API Error:', response.data.message);
-      return [];
-    }
-  } catch (error) {
-    console.error('Error fetching internal transactions from Etherscan:', error);
-    return [];
-  }
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress, startBlock, endBlock) {
+  const apiCall = `https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=${startBlock}&endblock=${endBlock}&sort=asc&apikey=${etherscanApiKey}`;
+  const response = await axios.get(apiCall);
+  return response.data.result;
 }
 
 // Calculate cumulative ETH generated from transactions
