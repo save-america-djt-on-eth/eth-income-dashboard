@@ -75,11 +75,25 @@ let cache = {
 let lastCacheUpdateTime = 0;
 const cacheDuration = 1800000; // 30 minutes
 
-// Function to fetch balance history with rate limiting
-async function fetchBalanceHistory(address, blockNumber, apiKey, delay) {
+// Function to fetch balance history with rate limiting and retry logic
+async function fetchBalanceHistory(address, blockNumber, apiKey, delay, retries = 3) {
   await wait(delay);
-  const response = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${address}&blockno=${blockNumber}&apikey=${apiKey}`);
-  return response;
+  try {
+    const response = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${address}&blockno=${blockNumber}&apikey=${apiKey}`);
+    if (response.data.status === '1') {
+      return response;
+    } else {
+      throw new Error(response.data.message);
+    }
+  } catch (error) {
+    if (retries > 0 && error.message.includes('Maximum rate limit reached')) {
+      console.warn(`Retrying... ${retries} attempts left`);
+      await wait(delay * 2); // Increase the delay for the next retry
+      return fetchBalanceHistory(address, blockNumber, apiKey, delay, retries - 1);
+    } else {
+      throw error;
+    }
+  }
 }
 
 // Function to update the cache
@@ -94,7 +108,7 @@ async function updateCache() {
   // Ethereum addresses
   const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
   const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
-  const delay = 200; // 200ms delay between requests
+  const delay = 500; // 500ms delay between requests
 
   try {
     // Fetch current block number
