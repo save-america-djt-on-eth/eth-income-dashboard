@@ -68,6 +68,54 @@ let cache = {
 let lastCacheUpdateTime = 0;
 const cacheDuration = 1800000; // 30 minutes
 
+// Rate Limiter class implementation
+class RateLimiter {
+  constructor(limit, interval) {
+    this.limit = limit;
+    this.interval = interval;
+    this.tokens = limit;
+    this.lastRefill = Date.now();
+  }
+
+  acquireToken() {
+    this.refillTokens();
+    if (this.tokens > 0) {
+      this.tokens--;
+      return true;
+    }
+    return false;
+  }
+
+  refillTokens() {
+    const now = Date.now();
+    const elapsed = now - this.lastRefill;
+    if (elapsed > this.interval) {
+      const tokensToAdd = Math.floor(elapsed / this.interval) * this.limit;
+      this.tokens = Math.min(this.tokens + tokensToAdd, this.limit);
+      this.lastRefill = now;
+    }
+  }
+}
+
+// Instantiate the rate limiter with a limit of 5 calls per second
+const rateLimiter = new RateLimiter(5, 1000);
+
+// Function to make a rate-limited API call
+async function rateLimitedApiCall(url) {
+  return new Promise((resolve, reject) => {
+    const attemptCall = () => {
+      if (rateLimiter.acquireToken()) {
+        axios.get(url)
+          .then(response => resolve(response))
+          .catch(error => reject(error));
+      } else {
+        setTimeout(attemptCall, 100); // Retry after 100ms if no tokens are available
+      }
+    };
+    attemptCall();
+  });
+}
+
 // Function to update the cache
 async function updateCache() {
   const currentTime = Date.now();
@@ -80,12 +128,12 @@ async function updateCache() {
   try {
     // Fetch current block number
     const blockUrl = `https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`;
-    const blockResponse = await axios.get(blockUrl);
+    const blockResponse = await rateLimitedApiCall(blockUrl);
     const currentBlock = parseInt(blockResponse.data.result, 16);
 
     // Fetch current balance of Trump's address
     const balanceUrl = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=latest&apikey=${etherscanApiKey}`;
-    const balanceResponse = await axios.get(balanceUrl);
+    const balanceResponse = await rateLimitedApiCall(balanceUrl);
 
     if (balanceResponse.data.status !== "1") {
       console.error(`Etherscan API Error: ${balanceResponse.data.message}`);
@@ -143,7 +191,7 @@ async function updateCache() {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         const balanceUrl = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`;
         try {
-          const response = await axios.get(balanceUrl);
+          const response = await rateLimitedApiCall(balanceUrl);
           if (response.data.status !== "1") {
             console.error(`Etherscan API Error: ${response.data.message}`);
             trumpEtherIncomeDuringTimeFrame[interval - i] = 0;
@@ -243,17 +291,7 @@ app.get('/api/data', (req, res) => {
 // Fetch internal transactions from Etherscan
 async function fetchContractTransactionsEtherscan(fromAddress, toAddress) {
   try {
-    const response = await axios.get('https://api.etherscan.io/api', {
-      params: {
-        module: 'account',
-        action: 'txlistinternal',
-        address: toAddress,
-        startblock: 0,
-        endblock: 'latest',
-        sort: 'asc',
-        apikey: etherscanApiKey,
-      },
-    });
+    const response = await rateLimitedApiCall(`https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`);
     if (response.data.status === "1") {
       return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
     } else {
