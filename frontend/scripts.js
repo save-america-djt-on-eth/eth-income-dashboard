@@ -30,16 +30,16 @@ function fetchData(timeFrame) {
                 return;
             }
             console.log("API Data: ", data);
-            updateChart(data.labels, data.ethAddedDuringTimeFrame, data.ethGeneratedByDJT, timeFrame);
-            document.getElementById("total-eth").innerText = data.newEthHoldings.toFixed(4);
-            document.getElementById("eth-generated-djt").innerText = data.newEthGeneratedDJT.toFixed(4);
-            const percentage = ((data.newEthGeneratedDJT / data.newEthHoldings) * 100).toFixed(0);
+            updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, timeFrame);
+            document.getElementById("total-eth").innerText = Number(data.currentEthTotal).toFixed(4);
+            document.getElementById("eth-generated-djt").innerText = Number(data.contractBalance).toFixed(4);
+            const percentage = ((data.contractBalance / data.currentEthTotal) * 100).toFixed(0);
             document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
         .catch(error => console.error("Error fetching data: ", error));
 }
 
-function updateChart(labels, ethAddedDuringTimeFrame, ethGeneratedByDJT, timeFrame) {
+function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromContract, timeFrame) {
     const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
 
     Highcharts.chart('myChart', {
@@ -125,12 +125,13 @@ function updateChart(labels, ethAddedDuringTimeFrame, ethGeneratedByDJT, timeFra
             }
         },
         series: [{
-            name: 'Total ETH Added (Excluding DJT)',
-            data: ethAddedDuringTimeFrame,
-            color: '#29ABE2'
+            name: 'Other ETH Income (Excluding $DJT Generated ETH)',
+            data: trumpEtherIncomeDuringTimeFrame,
+            color: '#29ABE2',
+            visible: false // Hide by default
         }, {
-            name: '$DJT Generated ETH',
-            data: ethGeneratedByDJT,
+            name: '$DJT Generated ETH Income',
+            data: etherIncomeFromContract,
             color: '#F15A24'
         }],
         legend: {

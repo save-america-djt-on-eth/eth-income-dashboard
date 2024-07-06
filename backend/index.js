@@ -1,21 +1,26 @@
-// index.js: Server-side JavaScript for handling API requests and processing data
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
+const { ethers } = require('ethers');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const crypto = require('crypto');
-const path = require('path');
-const axios = require('axios');
-const { ethers } = require('ethers');
-require('dotenv').config();
 
+// Load variables from .env
 const app = express();
 const port = process.env.PORT || 3000;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 
-// Ethereum addresses
-const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce'; //Trump's doxxed ETH address
-const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1'; //DJT contractAddress
+// Days since Save America $DJT launched
+const oneDay = 24 * 60 * 60 * 1000; // hours * minutes * seconds * milliseconds
+const firstDate = new Date(2024, 3, 21); // Save America $DJT Launch date
+const secondDate = new Date(); // Today
+const diffDaysSinceLaunch = Math.round(Math.abs((firstDate - secondDate) / oneDay));
+
+// Function to wait for a specified amount of time
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Middleware to generate a nonce for CSP
 app.use((req, res, next) => {
@@ -33,7 +38,7 @@ app.use((req, res, next) => {
       styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "https://api.etherscan.io"],
+      connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
     },
   })(req, res, next);
 });
@@ -79,104 +84,150 @@ async function updateCache() {
   }
   lastCacheUpdateTime = currentTime;
 
+  // Ethereum addresses
+  const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
+  const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
+
   try {
+    // Fetch current block number
+    const blockResponse = await axios.get(`https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`);
+    await wait(200);
+    const currentBlock = parseInt(blockResponse.data.result, 16);
+
     // Fetch current balance of Trump's address
-    const url = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=latest&apikey=${etherscanApiKey}`;
-    console.log(`Fetching balance from URL: ${url}`);
-    const response = await axios.get(url);
+    const currentBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&apikey=${etherscanApiKey}`);
+    await wait(200);
+    const currentEthBalance = parseFloat(ethers.formatEther(currentBalanceResponse.data.result)).toFixed(4);
 
-    if (response.data.status !== "1") {
-      console.error(`Etherscan API Error: ${response.data.message}`);
-      throw new Error(`Etherscan API Error: ${response.data.message}`);
-    }
+    // Function to fetch historical block number
+    const fetchHistoricalBlock = async (daysAgo) => {
+      const timestamp = Math.floor(Date.now() / 1000) - (daysAgo * 24 * 60 * 60);
+      const response = await axios.get(`https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${etherscanApiKey}`);
+      await wait(200);
+      return parseInt(response.data.result);
+    };
 
-    const currentTrumpBalance = response.data.result;
-    const currentEthBalance = parseFloat(ethers.utils.formatEther(currentTrumpBalance)).toFixed(4);
-    const currentBlock = await provider.getBlockNumber();
+    // Fetch historical blocks
+    const historicalBlock1d = await fetchHistoricalBlock(1);
+    const historicalBlock7d = await fetchHistoricalBlock(7);
+    const historicalBlock30d = await fetchHistoricalBlock(30);
+    const historicalBlockCustom = 19484850; // First block with internal transactions from DJT contract to trumpAddress
 
-    // Define block intervals
-    const blocksPerDay = 6500;
-    const blocksPerHour = Math.round(blocksPerDay / 24);
-    const blocksPer6Hours = Math.round(blocksPerDay / 4);
-
-    // Generate data for a specific time frame
+    // Function to generate data for a specific time frame
     const generateData = async (timeFrame) => {
-      let days, interval, blocksPerInterval, startDate, endDate;
-      let labels = [];
+      let days, interval, blocksPerInterval, startBlock, endBlock;
       switch (timeFrame) {
         case '1d':
           days = 1;
           interval = 24;
-          blocksPerInterval = blocksPerHour;
-          labels = generateTimeLabels(days, interval);
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock1d) / interval);
+          startBlock = historicalBlock1d;
+          endBlock = currentBlock;
           break;
         case '7d':
           days = 7;
           interval = 28;
-          blocksPerInterval = blocksPer6Hours;
-          labels = generateTimeLabels(days, interval);
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock7d) / interval);
+          startBlock = historicalBlock7d;
+          endBlock = currentBlock;
           break;
         case '30d':
           days = 30;
           interval = 30;
-          blocksPerInterval = blocksPerDay;
-          labels = generateTimeLabels(days, interval);
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock30d) / interval);
+          startBlock = historicalBlock30d;
+          endBlock = currentBlock;
           break;
         case 'custom':
-          startDate = new Date('2024-03-20');
-          endDate = new Date();
-          days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+          startBlock = historicalBlockCustom;
+          endBlock = currentBlock;
+          days = Math.ceil((Date.now() - new Date('2024-03-20').getTime()) / (1000 * 60 * 60 * 24));
           interval = 30;
-          blocksPerInterval = Math.floor((blocksPerDay * days) / interval);
-          labels = generateCustomTimeLabels(startDate, endDate, interval);
+          blocksPerInterval = Math.floor((endBlock - startBlock) / interval);
           break;
         default:
+          console.error(`Invalid time frame: ${timeFrame}`);
           throw new Error('Invalid time frame');
       }
 
-      const ethAddedDuringTimeFrame = [];
-      const ethGeneratedByDJT = [];
+      const supplyChange = [];
+      let previousBalance = null;
 
-      // Fetch internal transactions
-      const internalTransactions = await fetchInternalTransactionsEtherscan(trumpAddress);
-
-      // Calculate cumulative ETH generated
-      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, interval);
-
-      // Calculate ETH generated by DJT during the timeframe
-      cumulativeEthGenerated.forEach((value, index) => {
-        if (index > 0) {
-          ethGeneratedByDJT.push(value - cumulativeEthGenerated[index - 1]);
+      // Fetch initial balance at the startBlock
+      let initialBalance = 0;
+      try {
+        const initialBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${startBlock}&apikey=${etherscanApiKey}`);
+        await wait(200);
+        if (initialBalanceResponse.data.status === '1') {
+          initialBalance = parseFloat(ethers.formatEther(initialBalanceResponse.data.result));
         } else {
-          ethGeneratedByDJT.push(value);
+          console.error(`Invalid response for initial balance at block ${startBlock}:`, initialBalanceResponse.data);
         }
-      });
+      } catch (error) {
+        console.error(`Error fetching initial balance for block ${startBlock}: ${error.message}`);
+        console.error(`Response data: ${JSON.stringify(initialBalanceResponse ? initialBalanceResponse.data : 'No response data')}`);
+      }
 
-      // Make ETH values cumulative and adjust starting point
-      const cumulativeEthAddedDuringTimeFrame = ethAddedDuringTimeFrame.reduce((acc, value, index) => {
-        if (index === 0) {
-          acc.push(value);
-        } else {
-          acc.push(acc[index - 1] + value);
+      for (let i = 0; i <= interval; i++) {
+        const blockNumber = startBlock + (i * blocksPerInterval);
+        let balanceResponse;
+        try {
+          balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${blockNumber}&apikey=${etherscanApiKey}`);
+          await wait(200);
+          if (balanceResponse.data.status === '1') {
+            const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
+            if (previousBalance !== null) {
+              supplyChange.push(ethBalance - previousBalance);
+            } else {
+              supplyChange.push(ethBalance - initialBalance); // Use initial balance for the first delta
+            }
+            previousBalance = ethBalance;
+          } else {
+            console.error(`Invalid response for block ${blockNumber}:`, balanceResponse.data);
+            supplyChange.push(0);
+          }
+        } catch (error) {
+          console.error(`Error fetching balance for block ${blockNumber}: ${error.message}`);
+          console.error(`Response data: ${JSON.stringify(balanceResponse ? balanceResponse.data : 'No response data')}`);
+          supplyChange.push(0);
         }
-        return acc;
-      }, []);
-      const cumulativeEthGeneratedByDJT = ethGeneratedByDJT.reduce((acc, value, index) => {
-        if (index === 0) {
-          acc.push(0); // Start with 0
-        } else {
-          acc.push(acc[index - 1] + value);
-        }
-        return acc;
-      }, []);
+      }
+
+      // Make supplyChange cumulative
+      for (let i = 1; i < supplyChange.length; i++) {
+        supplyChange[i] += supplyChange[i - 1];
+      }
+
+      // Adjust the first element by adding initialBalance
+      if (supplyChange.length > 0) {
+        supplyChange[0] += initialBalance;
+      }
+
+      const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
+      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, startBlock, blocksPerInterval, interval);
+
+      const contractBalance = internalTransactions.reduce((total, tx) => {
+        const value = tx.value.toString();
+        const integerPart = value.slice(0, -18) || '0';
+        const decimalPart = value.slice(-18).padStart(18, '0');
+        const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
+        return total + formattedValue;
+      }, 0).toFixed(4);
+
+      const labels = timeFrame === 'custom' ? generateCustomTimeLabels(new Date('2024-03-20'), new Date(), interval) : generateTimeLabels(days, interval);
+
+      const supplyDelta = calculateDeltas(supplyChange);
+      const djtDelta = calculateDeltas(cumulativeEthGenerated);
 
       return {
-        labels,
-        ethAddedDuringTimeFrame: cumulativeEthAddedDuringTimeFrame,
-        ethGeneratedByDJT: cumulativeEthGeneratedByDJT,
-        currentEthTotal: currentEthBalance,
-        newEthHoldings: ethAddedDuringTimeFrame,
-        newEthGeneratedDJT: cumulativeEthGeneratedByDJT
+        labels: labels.slice(1),
+        djt: djtDelta,
+        nft: generateRandomData(labels.length - 1),
+        other: generateRandomData(labels.length - 1),
+        supplyChange: supplyDelta,
+        cumulativeEthGenerated: djtDelta,
+        contractBalance,
+        currentEthTotal: currentEthBalance
       };
     };
 
@@ -214,21 +265,36 @@ app.get('/api/data', (req, res) => {
       res.json(cache[timeFrame]);
     }
   } else {
+    console.error(`Invalid time frame requested: ${timeFrame}`);
     res.status(400).json({ error: 'Invalid time frame' });
   }
 });
 
+// API endpoint to fetch the current cache state
+app.get('/api/cache', (req, res) => {
+  res.json(cache);
+});
+
 // Fetch internal transactions from Etherscan
-async function fetchInternalTransactionsEtherscan(toAddress) {
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
   try {
-    const url = `https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`;
-    console.log(`Fetching internal transactions from URL: ${url}`);
-    const response = await axios.get(url);
+    const response = await axios.get('https://api.etherscan.io/api', {
+      params: {
+        module: 'account',
+        action: 'txlistinternal',
+        address: toAddress,
+        startblock: 0,
+        endblock: 'latest',
+        sort: 'asc',
+        apikey: etherscanApiKey
+      }
+    });
+    await wait(200);
     if (response.data.status === "1") {
-      return response.data.result.filter(tx => tx.to.toLowerCase() === toAddress.toLowerCase());
+      return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
     } else {
-      console.error(`Etherscan API Error: ${response.data.message}`);
-      throw new Error(`Etherscan API Error: ${response.data.message}`);
+      console.error('Etherscan API Error:', response.data.message);
+      return [];
     }
   } catch (error) {
     console.error('Error fetching internal transactions from Etherscan:', error);
@@ -237,45 +303,63 @@ async function fetchInternalTransactionsEtherscan(toAddress) {
 }
 
 // Calculate cumulative ETH generated from transactions
-function calculateCumulativeEthGenerated(transactions, interval) {
-  const cumulativeEthGenerated = new Array(interval + 1).fill(0);
+function calculateCumulativeEthGenerated(transactions, length, startBlock, blocksPerInterval, interval) {
+  const cumulativeEthGenerated = new Array(length).fill(0);
   transactions.forEach(tx => {
     const value = tx.value.toString();
     const integerPart = value.slice(0, -18) || '0';
     const decimalPart = value.slice(-18).padStart(18, '0');
     const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
-    cumulativeEthGenerated.forEach((_, index) => {
-      cumulativeEthGenerated[index] += ethValue;
-    });
+    const blockNumber = parseInt(tx.blockNumber);
+
+    for (let i = 0; i < length; i++) {
+      const blockThreshold = startBlock + (i * blocksPerInterval);
+      if (blockNumber <= blockThreshold) {
+        cumulativeEthGenerated[i] += ethValue;
+      }
+    }
   });
   return cumulativeEthGenerated;
 }
 
-// Generate time labels
+// Generate time labels based on days and interval
 function generateTimeLabels(days, interval) {
   const labels = [];
-  const currentDate = new Date();
-  for (let i = interval; i >= 0; i--) {
-    const date = new Date(currentDate);
-    date.setDate(currentDate.getDate() - (days / interval) * i);
-    labels.push(date.toISOString().split('T')[0]);
+  const today = new Date();
+  const msPerInterval = (days * 24 * 60 * 60 * 1000) / interval;
+  for (let i = 0; i <= interval; i++) {
+    const date = new Date(today.getTime() - (i * msPerInterval));
+    labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
   }
   return labels;
 }
 
-// Generate custom time labels
+// Generate custom time labels based on start and end dates
 function generateCustomTimeLabels(startDate, endDate, interval) {
   const labels = [];
-  const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-  for (let i = interval; i >= 0; i--) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + (totalDays / interval) * i);
-    labels.push(date.toISOString().split('T')[0]);
+  const msPerInterval = (endDate - startDate) / interval;
+  for (let i = 0; i <= interval; i++) {
+    const date = new Date(startDate.getTime() + (i * msPerInterval));
+    labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
   }
   return labels;
+}
+
+// Calculate deltas for data
+function calculateDeltas(data) {
+  const deltas = [];
+  for (let i = 1; i < data.length; i++) {
+    deltas.push(data[i - 1] + (data[i] - data[i - 1]));
+  }
+  return deltas;
+}
+
+// Generate random data for demonstration purposes
+function generateRandomData(length) {
+  return Array.from({ length }, () => Math.floor(Math.random() * 100));
 }
 
 // Start the server
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
