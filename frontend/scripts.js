@@ -32,8 +32,8 @@ function fetchData(timeFrame) {
             console.log("API Data: ", data);
             updateChart(data.labels, data.trumpEtherIncomeDuringTimeFrame, data.etherIncomeFromContract, timeFrame);
             document.getElementById("total-eth").innerText = Number(data.trumpTotalEther).toFixed(4);
-            document.getElementById("eth-generated-djt").innerText = Number(data.totalEtherFromDJT.slice(-1)[0]).toFixed(4);
-            const percentage = ((Number(data.totalEtherFromDJT.slice(-1)[0]) / Number(data.trumpTotalEther)) * 100).toFixed(0);
+            document.getElementById("eth-generated-djt").innerText = Number(data.etherIncomeFromContract.slice(-1)[0]).toFixed(4);
+            const percentage = ((Number(data.etherIncomeFromContract.slice(-1)[0]) / Number(data.trumpTotalEther)) * 100).toFixed(0);
             document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
         .catch(error => console.error("Error fetching data: ", error));
