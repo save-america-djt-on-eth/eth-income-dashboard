@@ -142,6 +142,7 @@ async function updateCache() {
 
       const ethAddedDuringTimeFrame = [];
       const ethGeneratedByDJT = [];
+      const startingEthBalance = 0; // Replace with the actual starting balance if known
 
       // Fetch internal transactions
       const internalTransactions = await fetchInternalTransactionsEtherscan(trumpAddress);
@@ -169,7 +170,7 @@ async function updateCache() {
       }, []);
       const cumulativeEthGeneratedByDJT = ethGeneratedByDJT.reduce((acc, value, index) => {
         if (index === 0) {
-          acc.push(0); // Start with 0
+          acc.push(startingEthBalance); // Start with the actual starting balance
         } else {
           acc.push(acc[index - 1] + value);
         }
