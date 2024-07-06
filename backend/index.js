@@ -8,8 +8,19 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const crypto = require('crypto');
 
+// Load variables from .env
 const app = express();
 const port = process.env.PORT || 3000;
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+
+// Days since Save America $DJT launched
+const oneDay = 24 * 60 * 60 * 1000; // hours * minutes * seconds * milliseconds
+const firstDate = new Date(2024, 3, 21); // Save America $DJT Launch date
+const secondDate = new Date(); // Today
+const diffDaysSinceLaunch = Math.round(Math.abs((firstDate - secondDate) / oneDay));
+
+// Function to wait for a specified amount of time
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Middleware to generate a nonce for CSP
 app.use((req, res, next) => {
@@ -54,13 +65,6 @@ app.use(express.json());
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Use the Infura API key from .env file
-const infuraApiKey = process.env.INFURA_API_KEY;
-const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
-console.log(`Using provider URL: ${providerUrl}`);
-
-const provider = new ethers.JsonRpcProvider(providerUrl);
-
 // Cache object to store data
 let cache = {
   '1d': null,
@@ -85,41 +89,61 @@ async function updateCache() {
   const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
 
   try {
-    // Fetch current balance of Trump's address
-    const currentBalance = await provider.getBalance(trumpAddress);
-    const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
-    const currentBlock = await provider.getBlockNumber();
+    // Fetch current block number
+    const blockResponse = await axios.get(`https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`);
+    await wait(200);
+    const currentBlock = parseInt(blockResponse.data.result, 16);
 
-    // Define block intervals
-    const blocksPerDay = 6500;
-    const blocksPerHour = Math.round(blocksPerDay / 24);
-    const blocksPer6Hours = Math.round(blocksPerDay / 4);
+    // Fetch current balance of Trump's address
+    const currentBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&apikey=${etherscanApiKey}`);
+    await wait(200);
+    const currentEthBalance = parseFloat(ethers.formatEther(currentBalanceResponse.data.result)).toFixed(4);
+
+    // Function to fetch historical block number
+    const fetchHistoricalBlock = async (daysAgo) => {
+      const timestamp = Math.floor(Date.now() / 1000) - (daysAgo * 24 * 60 * 60);
+      const response = await axios.get(`https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${etherscanApiKey}`);
+      await wait(200);
+      return parseInt(response.data.result);
+    };
+
+    // Fetch historical blocks
+    const historicalBlock1d = await fetchHistoricalBlock(1);
+    const historicalBlock7d = await fetchHistoricalBlock(7);
+    const historicalBlock30d = await fetchHistoricalBlock(30);
+    const historicalBlockCustom = 19484850; // First block with internal transactions from DJT contract to trumpAddress
 
     // Function to generate data for a specific time frame
     const generateData = async (timeFrame) => {
-      let days, interval, blocksPerInterval, startDate, endDate;
+      let days, interval, blocksPerInterval, startBlock, endBlock;
       switch (timeFrame) {
         case '1d':
           days = 1;
           interval = 24;
-          blocksPerInterval = blocksPerHour;
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock1d) / interval);
+          startBlock = historicalBlock1d;
+          endBlock = currentBlock;
           break;
         case '7d':
           days = 7;
           interval = 28;
-          blocksPerInterval = blocksPer6Hours;
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock7d) / interval);
+          startBlock = historicalBlock7d;
+          endBlock = currentBlock;
           break;
         case '30d':
           days = 30;
           interval = 30;
-          blocksPerInterval = blocksPerDay;
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock30d) / interval);
+          startBlock = historicalBlock30d;
+          endBlock = currentBlock;
           break;
         case 'custom':
-          startDate = new Date('2024-03-20');
-          endDate = new Date();
-          days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+          startBlock = historicalBlockCustom;
+          endBlock = currentBlock;
+          days = Math.ceil((Date.now() - new Date('2024-03-20').getTime()) / (1000 * 60 * 60 * 24));
           interval = 30;
-          blocksPerInterval = Math.floor((blocksPerDay * days) / interval);
+          blocksPerInterval = Math.floor((endBlock - startBlock) / interval);
           break;
         default:
           console.error(`Invalid time frame: ${timeFrame}`);
@@ -127,25 +151,61 @@ async function updateCache() {
       }
 
       const supplyChange = [];
-      for (let i = interval; i >= 0; i--) {
-        const blockNumber = currentBlock - (i * blocksPerInterval);
+      let previousBalance = null;
+
+      // Fetch initial balance at the startBlock
+      let initialBalance = 0;
+      try {
+        const initialBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${startBlock}&apikey=${etherscanApiKey}`);
+        await wait(200);
+        if (initialBalanceResponse.data.status === '1') {
+          initialBalance = parseFloat(ethers.formatEther(initialBalanceResponse.data.result));
+        } else {
+          console.error(`Invalid response for initial balance at block ${startBlock}:`, initialBalanceResponse.data);
+        }
+      } catch (error) {
+        console.error(`Error fetching initial balance for block ${startBlock}: ${error.message}`);
+        console.error(`Response data: ${JSON.stringify(initialBalanceResponse ? initialBalanceResponse.data : 'No response data')}`);
+      }
+
+      for (let i = 0; i <= interval; i++) {
+        const blockNumber = startBlock + (i * blocksPerInterval);
+        let balanceResponse;
         try {
-          const balance = await provider.getBalance(trumpAddress, blockNumber);
-          const ethBalance = parseFloat(ethers.formatEther(balance));
-          supplyChange.push(ethBalance);
+          balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${blockNumber}&apikey=${etherscanApiKey}`);
+          await wait(200);
+          if (balanceResponse.data.status === '1') {
+            const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
+            if (previousBalance !== null) {
+              supplyChange.push(ethBalance - previousBalance);
+            } else {
+              supplyChange.push(ethBalance - initialBalance); // Use initial balance for the first delta
+            }
+            previousBalance = ethBalance;
+          } else {
+            console.error(`Invalid response for block ${blockNumber}:`, balanceResponse.data);
+            supplyChange.push(0);
+          }
         } catch (error) {
-          console.error(`Error fetching balance for block ${blockNumber}:`, error);
+          console.error(`Error fetching balance for block ${blockNumber}: ${error.message}`);
+          console.error(`Response data: ${JSON.stringify(balanceResponse ? balanceResponse.data : 'No response data')}`);
           supplyChange.push(0);
         }
       }
 
-      // Fetch internal transactions
+      // Make supplyChange cumulative
+      for (let i = 1; i < supplyChange.length; i++) {
+        supplyChange[i] += supplyChange[i - 1];
+      }
+
+      // Adjust the first element by adding initialBalance
+      if (supplyChange.length > 0) {
+        supplyChange[0] += initialBalance;
+      }
+
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
+      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, startBlock, blocksPerInterval, interval);
 
-      // Calculate cumulative ETH generated
-      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
-
-      // Calculate contract balance
       const contractBalance = internalTransactions.reduce((total, tx) => {
         const value = tx.value.toString();
         const integerPart = value.slice(0, -18) || '0';
@@ -154,25 +214,18 @@ async function updateCache() {
         return total + formattedValue;
       }, 0).toFixed(4);
 
-      // Generate time labels
-      const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
+      const labels = timeFrame === 'custom' ? generateCustomTimeLabels(new Date('2024-03-20'), new Date(), interval) : generateTimeLabels(days, interval);
 
-      // Calculate deltas for supply change and cumulative ETH generated
       const supplyDelta = calculateDeltas(supplyChange);
       const djtDelta = calculateDeltas(cumulativeEthGenerated);
 
-      // Generate random data for demonstration purposes
-      const djtData = generateRandomData(labels.length);
-      const nftData = generateRandomData(labels.length);
-      const otherData = generateRandomData(labels.length);
-
       return {
-        labels: labels.slice(1), // Remove the first label as we now have deltas
-        djt: djtData,
-        nft: nftData,
-        other: otherData,
-        supplyChange: supplyDelta, // Return the deltas
-        cumulativeEthGenerated: djtDelta, // Return the deltas
+        labels: labels.slice(1),
+        djt: djtDelta,
+        nft: generateRandomData(labels.length - 1),
+        other: generateRandomData(labels.length - 1),
+        supplyChange: supplyDelta,
+        cumulativeEthGenerated: djtDelta,
         contractBalance,
         currentEthTotal: currentEthBalance
       };
@@ -224,7 +277,6 @@ app.get('/api/cache', (req, res) => {
 
 // Fetch internal transactions from Etherscan
 async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
-  const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
   try {
     const response = await axios.get('https://api.etherscan.io/api', {
       params: {
@@ -237,6 +289,7 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
         apikey: etherscanApiKey
       }
     });
+    await wait(200);
     if (response.data.status === "1") {
       return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
     } else {
@@ -250,7 +303,7 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
 }
 
 // Calculate cumulative ETH generated from transactions
-function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerInterval, interval) {
+function calculateCumulativeEthGenerated(transactions, length, startBlock, blocksPerInterval, interval) {
   const cumulativeEthGenerated = new Array(length).fill(0);
   transactions.forEach(tx => {
     const value = tx.value.toString();
@@ -260,7 +313,7 @@ function calculateCumulativeEthGenerated(transactions, length, currentBlock, blo
     const blockNumber = parseInt(tx.blockNumber);
 
     for (let i = 0; i < length; i++) {
-      const blockThreshold = currentBlock - ((interval - i) * blocksPerInterval);
+      const blockThreshold = startBlock + (i * blocksPerInterval);
       if (blockNumber <= blockThreshold) {
         cumulativeEthGenerated[i] += ethValue;
       }
@@ -274,7 +327,7 @@ function generateTimeLabels(days, interval) {
   const labels = [];
   const today = new Date();
   const msPerInterval = (days * 24 * 60 * 60 * 1000) / interval;
-  for (let i = interval; i >= 0; i--) {
+  for (let i = 0; i <= interval; i++) {
     const date = new Date(today.getTime() - (i * msPerInterval));
     labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
   }

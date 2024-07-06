@@ -17,7 +17,6 @@ function fetchData(timeFrame) {
         activeButton.classList.add("active");
     }
 
-    // Get the current protocol and hostname
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
@@ -31,26 +30,16 @@ function fetchData(timeFrame) {
                 return;
             }
             console.log("API Data: ", data);
-            // Update the chart
             updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, timeFrame);
-
-            // Update the ETH values
-            document.getElementById("total-eth").innerText = data.currentEthTotal.toFixed(4);
-
-            // Ensure contractBalance is a number
-            const contractBalance = parseFloat(data.contractBalance);
-            if (!isNaN(contractBalance)) {
-                document.getElementById("eth-generated-djt").innerText = contractBalance.toFixed(4);
-                const percentage = ((contractBalance / data.currentEthTotal) * 100).toFixed(0);
-                document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
-            } else {
-                console.error("contractBalance is not a valid number");
-            }
+            document.getElementById("total-eth").innerText = Number(data.currentEthTotal).toFixed(4);
+            document.getElementById("eth-generated-djt").innerText = Number(data.contractBalance).toFixed(4);
+            const percentage = ((data.contractBalance / data.currentEthTotal) * 100).toFixed(0);
+            document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
         .catch(error => console.error("Error fetching data: ", error));
 }
 
-function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
+function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromContract, timeFrame) {
     const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
 
     Highcharts.chart('myChart', {
@@ -136,13 +125,13 @@ function updateChart(labels, supplyChange, cumulativeEthGenerated, timeFrame) {
             }
         },
         series: [{
-            name: 'Total ETH',
-            data: supplyChange,
+            name: 'Other ETH Income (Excluding $DJT Generated ETH)',
+            data: trumpEtherIncomeDuringTimeFrame,
             color: '#29ABE2',
             visible: false // Hide by default
         }, {
-            name: '$DJT Generated ETH',
-            data: cumulativeEthGenerated,
+            name: '$DJT Generated ETH Income',
+            data: etherIncomeFromContract,
             color: '#F15A24'
         }],
         legend: {
