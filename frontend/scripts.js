@@ -32,14 +32,14 @@ function fetchData(timeFrame) {
             console.log("API Data: ", data);
             updateChart(data.labels, data.trumpEtherIncomeDuringTimeFrame, data.etherIncomeFromContract, timeFrame);
             document.getElementById("total-eth").innerText = Number(data.trumpTotalEther).toFixed(4);
-            document.getElementById("eth-generated-djt").innerText = Number(data.totalEtherFromDJT.slice(-1)[0]).toFixed(4);
-            const percentage = ((Number(data.totalEtherFromDJT.slice(-1)[0]) / Number(data.trumpTotalEther)) * 100).toFixed(0);
+            document.getElementById("eth-generated-djt").innerText = Number(data.totalEtherFromDJT).toFixed(4);
+            const percentage = ((data.totalEtherFromDJT[data.totalEtherFromDJT.length - 1] / data.trumpTotalEther) * 100).toFixed(0);
             document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
         .catch(error => console.error("Error fetching data: ", error));
 }
 
-function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromContract, timeFrame) {
+function updateChart(labels, ethAddedDuringTimeFrame, ethGeneratedByDJT, timeFrame) {
     const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
 
     Highcharts.chart('myChart', {
@@ -126,11 +126,11 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
         },
         series: [{
             name: 'Total ETH Added (Excluding DJT)',
-            data: trumpEtherIncomeDuringTimeFrame,
+            data: ethAddedDuringTimeFrame,
             color: '#29ABE2'
         }, {
             name: '$DJT Generated ETH',
-            data: etherIncomeFromContract,
+            data: ethGeneratedByDJT,
             color: '#F15A24'
         }],
         legend: {
