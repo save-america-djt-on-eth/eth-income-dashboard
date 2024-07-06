@@ -127,7 +127,8 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
         series: [{
             name: 'Total ETH Added (Excluding DJT)',
             data: trumpEtherIncomeDuringTimeFrame,
-            color: '#29ABE2'
+            color: '#29ABE2',
+            visible: false // Hide by default
         }, {
             name: '$DJT Generated ETH',
             data: etherIncomeFromContract,
