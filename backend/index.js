@@ -108,12 +108,20 @@ async function rateLimitedApiCall(url, retries = 5) {
         const response = await axios.get(url);
         return response;
       } catch (error) {
-        if (error.response && error.response.data.result === 'Max rate limit reached' && i < retries - 1) {
-          console.warn(`Rate limit reached, retrying... (${i + 1}/${retries})`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** i))); // Exponential backoff
+        if (error.response) {
+          if (error.response.status === 502 && i < retries - 1) {
+            console.warn(`502 Bad Gateway, retrying... (${i + 1}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** i))); // Exponential backoff
+          } else if (error.response.data.result === 'Max rate limit reached' && i < retries - 1) {
+            console.warn(`Rate limit reached, retrying... (${i + 1}/${retries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** i))); // Exponential backoff
+          } else {
+            console.error('Error making API call:', error.message);
+            console.error('Full Error:', error.response ? error.response.data : error);
+            throw error;
+          }
         } else {
           console.error('Error making API call:', error.message);
-          console.error('Full Error:', error.response ? error.response.data : error);
           throw error;
         }
       }
