@@ -107,7 +107,14 @@ async function rateLimitedApiCall(url) {
       if (rateLimiter.acquireToken()) {
         axios.get(url)
           .then(response => resolve(response))
-          .catch(error => reject(error));
+          .catch(error => {
+            if (error.response && error.response.data) {
+              console.error('Etherscan API Response Error:', error.response.data);
+            } else {
+              console.error('Error making API call:', error.message);
+            }
+            reject(error);
+          });
       } else {
         setTimeout(attemptCall, 100); // Retry after 100ms if no tokens are available
       }
