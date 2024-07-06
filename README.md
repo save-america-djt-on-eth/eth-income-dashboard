@@ -33,7 +33,7 @@ cd eth-dashboard
 
 ```bash
 cd backend
-npm install
+npm install express axios dotenv ethers cors express-rate-limit helmet
 ```
 
 ### 3. Set up environment variables
@@ -43,7 +43,6 @@ Create a `.env` file in the `backend` directory with the following content:
 ```plaintext
 INFURA_API_KEY=your_infura_api_key
 ETHERSCAN_API_KEY=your_etherscan_api_key
-PORT=3000
 ```
 
 ### 4. Start the server
