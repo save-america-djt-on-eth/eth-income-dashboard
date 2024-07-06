@@ -140,13 +140,25 @@ async function updateCache() {
       const trumpEtherIncomeDuringTimeFrame = new Array(interval + 1).fill(startingEthBalance);
       const etherIncomeFromContract = new Array(interval + 1).fill(0);
 
-      // Fetch balances for each interval
-      for (let i = interval; i >= 0; i--) {
-        const blockNumber = currentBlock - (i * blocksPerInterval);
-        const balance = await provider.getBalance(trumpAddress, blockNumber);
-        const ethBalance = parseFloat(ethers.formatUnits(balance, 'ether'));
-        trumpEtherIncomeDuringTimeFrame[i] = ethBalance;
-      }
+	  // Fetch balances for each interval
+	  for (let i = interval; i >= 0; i--) {
+	  const blockNumber = currentBlock - (i * blocksPerInterval);
+  	  const balanceUrl = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`;
+		  try {
+			const response = await axios.get(balanceUrl);
+			if (response.data.status !== "1") {
+			  console.error(`Etherscan API Error: ${response.data.message}`);
+			  trumpEtherIncomeDuringTimeFrame[i] = 0;
+		  } else {
+			  const balance = response.data.result;
+			  const ethBalance = parseFloat(ethers.utils.formatUnits(balance, 'ether'));
+			  trumpEtherIncomeDuringTimeFrame[i] = ethBalance;
+			  }
+		  } catch (error) {
+		  console.error(`Error fetching balance for block ${blockNumber}:`, error);
+		  trumpEtherIncomeDuringTimeFrame[i] = 0;
+		  }
+	  }
 
       // Fetch internal transactions from contract address
       const contractTransactions = await fetchContractTransactionsEtherscan(contractAddress, trumpAddress);
