@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const ethers = require('ethers');
 
 const app = express();
 const port = process.env.PORT || 3000;
