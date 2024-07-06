@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
+const cors = require('cors');
 const helmet = require('helmet');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
@@ -11,7 +11,7 @@ const ethers = require('ethers');
 const app = express();
 const port = process.env.PORT || 3000;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-const startingEthBalance = parseFloat(process.env.STARTING_ETH_BALANCE) || 0; // Add initial balance to .env
+const startingEthBalance = parseFloat(process.env.STARTING_ETH_BALANCE) || 0;
 
 // Ethereum addresses
 const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
@@ -39,15 +39,13 @@ app.use((req, res, next) => {
 });
 
 // Set 'trust proxy' to specific addresses
-app.set('trust proxy', '127.0.0.1'); // Change this to your specific proxy address if needed
+app.set('trust proxy', '127.0.0.1');
 
 // Rate limiting middleware to limit requests from each IP
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  keyGenerator: (req, res) => {
-    return req.ip; // Customize key generator to trust specific IP addresses
-  }
+  keyGenerator: (req, res) => req.ip, // Customize key generator to trust specific IP addresses
 });
 app.use(limiter);
 
@@ -65,7 +63,7 @@ let cache = {
   '1d': null,
   '7d': null,
   '30d': null,
-  'custom': null
+  'custom': null,
 };
 let lastCacheUpdateTime = 0;
 const cacheDuration = 1800000; // 30 minutes
@@ -198,7 +196,7 @@ async function updateCache() {
         trumpEtherIncomeDuringTimeFrame: cumulativeEthAddedDuringTimeFrame,
         etherIncomeFromContract: cumulativeEthGeneratedByDJTFinal,
         trumpTotalEther: currentEthBalance,
-        totalEtherFromDJT: cumulativeEthGeneratedByDJTFinal
+        totalEtherFromDJT: cumulativeEthGeneratedByDJTFinal,
       };
     };
 
@@ -244,7 +242,6 @@ app.get('/api/data', (req, res) => {
 
 // Fetch internal transactions from Etherscan
 async function fetchContractTransactionsEtherscan(fromAddress, toAddress) {
-  const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
   try {
     const response = await axios.get('https://api.etherscan.io/api', {
       params: {
@@ -254,8 +251,8 @@ async function fetchContractTransactionsEtherscan(fromAddress, toAddress) {
         startblock: 0,
         endblock: 'latest',
         sort: 'asc',
-        apikey: etherscanApiKey
-      }
+        apikey: etherscanApiKey,
+      },
     });
     if (response.data.status === "1") {
       return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
