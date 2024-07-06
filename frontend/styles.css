@@ -7,6 +7,71 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 100vh;
+}
+
+.container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#chart-container {
+    width: 80%;
+    margin: 20px 0;
+}
+
+h1 {
+    color: #FFFFFF;
+    margin-bottom: 20px;
+}
+
+.metrics {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.metrics div {
+    margin: 5px 0;
+}
+
+#time-frame-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+#time-frame-buttons button {
+    margin: 0 5px;
+    padding: 10px 20px;
+    background-color: #1E1E1E;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#time-frame-buttons button:hover {
+    background-color: #333333;
+}
+
+#time-frame-buttons .active {
+    background-color: #4CAF50; /* Highlight color */
+    color: white;
+}
+
+body {
+    font-family: 'Unica One', sans-serif;
+    background-color: #121212;
+    color: #FFFFFF;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     min-height: 100vh;
 }
 
