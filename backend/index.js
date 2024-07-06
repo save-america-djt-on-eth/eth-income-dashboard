@@ -93,36 +93,51 @@ async function updateCache() {
     await wait(200);
     const currentEthBalance = parseFloat(ethers.formatEther(currentBalanceResponse.data.result)).toFixed(4);
 
-    // Define block intervals
-    const blocksPerDay = 6500;
-    const blocksPerHour = Math.round(blocksPerDay / 24);
-    const blocksPer6Hours = Math.round(blocksPerDay / 4);
+    // Function to fetch historical block number
+    const fetchHistoricalBlock = async (daysAgo) => {
+      const timestamp = Math.floor(Date.now() / 1000) - (daysAgo * 24 * 60 * 60);
+      const response = await axios.get(`https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${etherscanApiKey}`);
+      await wait(200);
+      return parseInt(response.data.result);
+    };
+
+    // Fetch historical blocks
+    const historicalBlock1d = await fetchHistoricalBlock(1);
+    const historicalBlock7d = await fetchHistoricalBlock(7);
+    const historicalBlock30d = await fetchHistoricalBlock(30);
+    const historicalBlockCustom = await fetchHistoricalBlock(90); // Assuming custom is 90 days ago
 
     // Function to generate data for a specific time frame
     const generateData = async (timeFrame) => {
-      let days, interval, blocksPerInterval, startDate, endDate;
+      let days, interval, blocksPerInterval, startBlock, endBlock;
       switch (timeFrame) {
         case '1d':
           days = 1;
           interval = 24;
-          blocksPerInterval = blocksPerHour;
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock1d) / interval);
+          startBlock = historicalBlock1d;
+          endBlock = currentBlock;
           break;
         case '7d':
           days = 7;
           interval = 28;
-          blocksPerInterval = blocksPer6Hours;
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock7d) / interval);
+          startBlock = historicalBlock7d;
+          endBlock = currentBlock;
           break;
         case '30d':
           days = 30;
           interval = 30;
-          blocksPerInterval = blocksPerDay;
+          blocksPerInterval = Math.floor((currentBlock - historicalBlock30d) / interval);
+          startBlock = historicalBlock30d;
+          endBlock = currentBlock;
           break;
         case 'custom':
-          startDate = new Date('2024-03-20');
-          endDate = new Date();
-          days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+          startBlock = historicalBlockCustom;
+          endBlock = currentBlock;
+          days = Math.ceil((Date.now() - new Date('2024-03-20').getTime()) / (1000 * 60 * 60 * 24));
           interval = 30;
-          blocksPerInterval = Math.floor((blocksPerDay * days) / interval);
+          blocksPerInterval = Math.floor((endBlock - startBlock) / interval);
           break;
         default:
           console.error(`Invalid time frame: ${timeFrame}`);
@@ -132,15 +147,15 @@ async function updateCache() {
       const supplyChange = [];
       let previousBalance = null;
 
-      for (let i = interval; i >= 0; i--) {
-        const blockNumber = currentBlock - (i * blocksPerInterval);
+      for (let i = 0; i <= interval; i++) {
+        const blockNumber = startBlock + (i * blocksPerInterval);
         try {
-          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`);
+          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber.toString(16)}&apikey=${etherscanApiKey}`);
           await wait(200);
           if (balanceResponse.data.result) {
             const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
             if (previousBalance !== null) {
-              supplyChange.push(previousBalance - ethBalance);
+              supplyChange.push(ethBalance - previousBalance);
             }
             previousBalance = ethBalance;
           } else {
@@ -154,7 +169,7 @@ async function updateCache() {
       }
 
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
-      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
+      const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, startBlock, blocksPerInterval, interval);
 
       const contractBalance = internalTransactions.reduce((total, tx) => {
         const value = tx.value.toString();
@@ -164,20 +179,16 @@ async function updateCache() {
         return total + formattedValue;
       }, 0).toFixed(4);
 
-      const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
+      const labels = timeFrame === 'custom' ? generateCustomTimeLabels(new Date('2024-03-20'), new Date(), interval) : generateTimeLabels(days, interval);
 
       const supplyDelta = calculateDeltas(supplyChange);
       const djtDelta = calculateDeltas(cumulativeEthGenerated);
 
-      const djtData = generateRandomData(labels.length);
-      const nftData = generateRandomData(labels.length);
-      const otherData = generateRandomData(labels.length);
-
       return {
         labels: labels.slice(1),
-        djt: djtData,
-        nft: nftData,
-        other: otherData,
+        djt: djtDelta,
+        nft: generateRandomData(labels.length - 1),
+        other: generateRandomData(labels.length - 1),
         supplyChange: supplyDelta,
         cumulativeEthGenerated: djtDelta,
         contractBalance,
@@ -257,7 +268,7 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
 }
 
 // Calculate cumulative ETH generated from transactions
-function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerInterval, interval) {
+function calculateCumulativeEthGenerated(transactions, length, startBlock, blocksPerInterval, interval) {
   const cumulativeEthGenerated = new Array(length).fill(0);
   transactions.forEach(tx => {
     const value = tx.value.toString();
@@ -267,7 +278,7 @@ function calculateCumulativeEthGenerated(transactions, length, currentBlock, blo
     const blockNumber = parseInt(tx.blockNumber);
 
     for (let i = 0; i < length; i++) {
-      const blockThreshold = currentBlock - ((interval - i) * blocksPerInterval);
+      const blockThreshold = startBlock + (i * blocksPerInterval);
       if (blockNumber <= blockThreshold) {
         cumulativeEthGenerated[i] += ethValue;
       }
@@ -281,7 +292,7 @@ function generateTimeLabels(days, interval) {
   const labels = [];
   const today = new Date();
   const msPerInterval = (days * 24 * 60 * 60 * 1000) / interval;
-  for (let i = interval; i >= 0; i--) {
+  for (let i = 0; i <= interval; i++) {
     const date = new Date(today.getTime() - (i * msPerInterval));
     labels.push(date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0]);
   }
