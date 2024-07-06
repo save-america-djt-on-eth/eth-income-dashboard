@@ -80,10 +80,13 @@ async function updateCache() {
   const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
 
   try {
-	  
+    // Fetch current block number
+    const blockResponse = await axios.get(`https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`);
+    const currentBlock = parseInt(blockResponse.data.result, 16);
+
     // Fetch current balance of Trump's address
-    const currentBalance = await axios.get(https://api.etherscan.io/api?module=account&action=balancehistory&address={$trumpAddress}&apikey={$etherscanApiKey})
-    const currentEthBalance = parseFloat(parseFloat(ethers.formatEther(currentBalance)).toFixed(4));
+    const currentBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&apikey=${etherscanApiKey}`);
+    const currentEthBalance = parseFloat(ethers.formatEther(currentBalanceResponse.data.result)).toFixed(4);
 
     // Define block intervals
     const blocksPerDay = 6500;
@@ -120,14 +123,14 @@ async function updateCache() {
           console.error(`Invalid time frame: ${timeFrame}`);
           throw new Error('Invalid time frame');
       }
-	  
-	  // Fetch income of Trump's address
+
+      // Fetch income of Trump's address
       const supplyChange = [];
       for (let i = interval; i >= 0; i--) {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
-          const balance = await axios.get(https://api.etherscan.io/api?module=account&action=balancehistory&address={$trumpAddress}&blockno=${blockNumber}&apikey={$etherscanApiKey})
-          const ethBalance = parseFloat(ethers.formatEther(balance));
+          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${blockNumber}&apikey=${etherscanApiKey}`);
+          const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
           supplyChange.push(ethBalance);
         } catch (error) {
           console.error(`Error fetching balance for block ${blockNumber}:`, error);
