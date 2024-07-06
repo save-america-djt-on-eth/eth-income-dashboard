@@ -13,6 +13,9 @@ const app = express();
 const port = process.env.PORT || 3000;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 
+// Function to wait for a specified amount of time
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 // Middleware to generate a nonce for CSP
 app.use((req, res, next) => {
   res.locals.nonce = crypto.randomBytes(16).toString('base64');
@@ -82,10 +85,12 @@ async function updateCache() {
   try {
     // Fetch current block number
     const blockResponse = await axios.get(`https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`);
+    await wait(200);
     const currentBlock = parseInt(blockResponse.data.result, 16);
 
     // Fetch current balance of Trump's address
     const currentBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&apikey=${etherscanApiKey}`);
+    await wait(200);
     const currentEthBalance = parseFloat(ethers.formatEther(currentBalanceResponse.data.result)).toFixed(4);
 
     // Define block intervals
@@ -130,6 +135,7 @@ async function updateCache() {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
           const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`);
+          await wait(200);
           const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
           supplyChange.push(ethBalance);
         } catch (error) {
@@ -235,6 +241,7 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
         apikey: etherscanApiKey
       }
     });
+    await wait(200);
     if (response.data.status === "1") {
       return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
     } else {
