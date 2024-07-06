@@ -13,6 +13,12 @@ const app = express();
 const port = process.env.PORT || 3000;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 
+// Days since Save America $DJT launched
+const oneDay = 24 * 60 * 60 * 1000; // hours * minutes * seconds * milliseconds
+const firstDate = new Date(2024, 3, 21); // Save America $DJT Launch date
+const secondDate = new Date(); // Today
+const diffDaysSinceLaunch = Math.round(Math.abs((firstDate - secondDate) / oneDay));
+
 // Function to wait for a specified amount of time
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -105,7 +111,7 @@ async function updateCache() {
     const historicalBlock1d = await fetchHistoricalBlock(1);
     const historicalBlock7d = await fetchHistoricalBlock(7);
     const historicalBlock30d = await fetchHistoricalBlock(30);
-    const historicalBlockCustom = await fetchHistoricalBlock(90); // Assuming custom is 90 days ago
+    const historicalBlockCustom = await fetchHistoricalBlock(diffDaysSinceLaunch);
 
     // Function to generate data for a specific time frame
     const generateData = async (timeFrame) => {
