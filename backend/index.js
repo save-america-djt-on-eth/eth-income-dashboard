@@ -124,6 +124,23 @@ async function rateLimitedApiCall(url, retries = 5) {
   throw new Error('Max retries reached');
 }
 
+// Function to fetch internal transactions from Etherscan
+async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
+  try {
+    const response = await rateLimitedApiCall(`https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`);
+    if (response.data.status === "1") {
+      return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
+    } else {
+      console.error('Etherscan API Error:', response.data.message);
+      console.log('Full Response:', response.data);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching internal transactions from Etherscan:', error);
+    return [];
+  }
+}
+
 // Function to update the cache
 async function updateCache() {
   const currentTime = Date.now();
@@ -134,135 +151,35 @@ async function updateCache() {
   lastCacheUpdateTime = currentTime;
 
   try {
-    // Fetch current block number
-    const blockUrl = `https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`;
-    const blockResponse = await rateLimitedApiCall(blockUrl);
-    const currentBlock = parseInt(blockResponse.data.result, 16);
+    // Fetch internal transactions (single API call)
+    const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
 
-    // Fetch current balance of Trump's address
-    const balanceUrl = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=latest&apikey=${etherscanApiKey}`;
-    const balanceResponse = await rateLimitedApiCall(balanceUrl);
+    // Calculate cumulative ETH generated
+    const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, 30, 6500, 24);
 
-    if (balanceResponse.data.status !== "1") {
-      console.error(`Etherscan API Error: ${balanceResponse.data.message}`);
-      console.log('Full Response:', balanceResponse.data);
-      throw new Error(`Etherscan API Error: ${balanceResponse.data.message}`);
-    }
+    // Calculate contract balance
+    const contractBalance = internalTransactions.reduce((total, tx) => {
+      const value = tx.value.toString();
+      const integerPart = value.slice(0, -18) || '0';
+      const decimalPart = value.slice(-18).padStart(18, '0');
+      const formattedValue = parseFloat(`${integerPart}.${decimalPart}`);
+      return total + formattedValue;
+    }, 0).toFixed(4);
 
-    const currentTrumpBalance = balanceResponse.data.result;
-    const currentEthBalance = parseFloat(ethers.formatEther(currentTrumpBalance));
+    // Generate time labels
+    const labels = generateTimeLabels(30, 24);
 
-    // Define block intervals
-    const blocksPerDay = 6500;
-    const blocksPerHour = Math.round(blocksPerDay / 24);
-    const blocksPer6Hours = Math.round(blocksPerDay / 4);
+    // Calculate deltas for cumulative ETH generated
+    const ethDelta = calculateDeltas(cumulativeEthGenerated);
 
-    // Generate data for a specific time frame
-    const generateData = async (timeFrame) => {
-      let days, interval, blocksPerInterval, startDate, endDate;
-      let labels = [];
-      switch (timeFrame) {
-        case '1d':
-          days = 1;
-          interval = 24;
-          blocksPerInterval = blocksPerHour;
-          labels = generateTimeLabels(days, interval);
-          break;
-        case '7d':
-          days = 7;
-          interval = 28;
-          blocksPerInterval = blocksPer6Hours;
-          labels = generateTimeLabels(days, interval);
-          break;
-        case '30d':
-          days = 30;
-          interval = 30;
-          blocksPerInterval = blocksPerDay;
-          labels = generateTimeLabels(days, interval);
-          break;
-        case 'custom':
-          startDate = new Date('2024-03-20');
-          endDate = new Date();
-          days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-          interval = 30;
-          blocksPerInterval = Math.floor((blocksPerDay * days) / interval);
-          labels = generateCustomTimeLabels(startDate, endDate, interval);
-          break;
-        default:
-          throw new Error('Invalid time frame');
-      }
-
-      const trumpEtherIncomeDuringTimeFrame = new Array(interval + 1).fill(startingEthBalance);
-      const etherIncomeFromContract = new Array(interval + 1).fill(0);
-
-      // Fetch balances for each interval
-      for (let i = interval; i >= 0; i--) {
-        const blockNumber = currentBlock - (i * blocksPerInterval);
-        const balanceUrl = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`;
-        try {
-          const response = await rateLimitedApiCall(balanceUrl);
-          if (response.data.status !== "1") {
-            console.error(`Etherscan API Error: ${response.data.message}`);
-            console.log('Full Response:', response.data);
-            trumpEtherIncomeDuringTimeFrame[interval - i] = 0;
-          } else {
-            const balance = response.data.result;
-            const ethBalance = parseFloat(ethers.formatEther(balance));
-            trumpEtherIncomeDuringTimeFrame[interval - i] = ethBalance;
-          }
-        } catch (error) {
-          console.error(`Error fetching balance for block ${blockNumber}:`, error);
-          trumpEtherIncomeDuringTimeFrame[interval - i] = 0;
-        }
-      }
-
-      // Fetch internal transactions from contract address
-      const contractTransactions = await fetchContractTransactionsEtherscan(contractAddress, trumpAddress);
-
-      // Calculate cumulative ETH generated by DJT
-      const cumulativeEthGeneratedByDJT = calculateCumulativeEthGeneratedByDJT(contractTransactions, interval);
-
-      // Calculate ETH generated by DJT during the timeframe
-      cumulativeEthGeneratedByDJT.forEach((value, index) => {
-        if (index > 0) {
-          etherIncomeFromContract[index] = value - cumulativeEthGeneratedByDJT[index - 1];
-        } else {
-          etherIncomeFromContract[index] = value;
-        }
-      });
-
-      // Make ETH values cumulative and adjust starting point
-      const cumulativeEthAddedDuringTimeFrame = trumpEtherIncomeDuringTimeFrame.reduce((acc, value, index) => {
-        if (index === 0) {
-          acc.push(startingEthBalance); // Start with the initial balance
-        } else {
-          acc.push(acc[index - 1] + (value - trumpEtherIncomeDuringTimeFrame[index - 1]));
-        }
-        return acc;
-      }, []);
-      const cumulativeEthGeneratedByDJTFinal = etherIncomeFromContract.reduce((acc, value, index) => {
-        if (index === 0) {
-          acc.push(0); // Start with 0
-        } else {
-          acc.push(acc[index - 1] + value);
-        }
-        return acc;
-      }, []);
-
-      return {
-        labels,
-        trumpEtherIncomeDuringTimeFrame: cumulativeEthAddedDuringTimeFrame,
-        etherIncomeFromContract: cumulativeEthGeneratedByDJTFinal,
-        trumpTotalEther: currentEthBalance,
-        totalEtherFromDJT: cumulativeEthGeneratedByDJTFinal,
-      };
+    // Update the cache
+    cache['custom'] = {
+      labels,
+      trumpEtherIncomeDuringTimeFrame: cumulativeEthGenerated,
+      etherIncomeFromContract: ethDelta,
+      trumpTotalEther: parseFloat(contractBalance),
+      totalEtherFromDJT: ethDelta,
     };
-
-    // Update cache for each time frame
-    cache['1d'] = await generateData('1d');
-    cache['7d'] = await generateData('7d');
-    cache['30d'] = await generateData('30d');
-    cache['custom'] = await generateData('custom');
 
     console.log('Cache updated at', new Date());
   } catch (error) {
@@ -298,36 +215,28 @@ app.get('/api/data', (req, res) => {
   }
 });
 
-// Fetch internal transactions from Etherscan
-async function fetchContractTransactionsEtherscan(fromAddress, toAddress) {
-  try {
-    const response = await rateLimitedApiCall(`https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`);
-    if (response.data.status === "1") {
-      return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
-    } else {
-      console.error('Etherscan API Error:', response.data.message);
-      console.log('Full Response:', response.data);
-      return [];
-    }
-  } catch (error) {
-    console.error('Error fetching internal transactions from Etherscan:', error);
-    return [];
-  }
-}
-
 // Calculate cumulative ETH generated from transactions
-function calculateCumulativeEthGeneratedByDJT(transactions, interval) {
-  const cumulativeEthGeneratedByDJT = new Array(interval + 1).fill(0);
+function calculateCumulativeEthGenerated(transactions, length, currentBlock, blocksPerInterval, interval) {
+  const cumulativeEthGenerated = new Array(length + 1).fill(0);
   transactions.forEach(tx => {
     const value = tx.value.toString();
     const integerPart = value.slice(0, -18) || '0';
     const decimalPart = value.slice(-18).padStart(18, '0');
     const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
-    cumulativeEthGeneratedByDJT.forEach((_, index) => {
-      cumulativeEthGeneratedByDJT[index] += ethValue;
+    cumulativeEthGenerated.forEach((_, index) => {
+      cumulativeEthGenerated[index] += ethValue;
     });
   });
-  return cumulativeEthGeneratedByDJT;
+  return cumulativeEthGenerated;
+}
+
+// Calculate deltas
+function calculateDeltas(data) {
+  const deltas = new Array(data.length).fill(0);
+  for (let i = 1; i < data.length; i++) {
+    deltas[i] = data[i] - data[i - 1];
+  }
+  return deltas;
 }
 
 // Generate time labels
@@ -337,18 +246,6 @@ function generateTimeLabels(days, interval) {
   for (let i = 0; i <= interval; i++) {
     const date = new Date(currentDate);
     date.setDate(currentDate.getDate() - (days / interval) * i);
-    labels.push(date.toISOString().split('T')[0]);
-  }
-  return labels.reverse();
-}
-
-// Generate custom time labels
-function generateCustomTimeLabels(startDate, endDate, interval) {
-  const labels = [];
-  const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-  for (let i = 0; i <= interval; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + (totalDays / interval) * i);
     labels.push(date.toISOString().split('T')[0]);
   }
   return labels.reverse();
