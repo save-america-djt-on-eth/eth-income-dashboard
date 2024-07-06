@@ -107,14 +107,7 @@ async function rateLimitedApiCall(url) {
       if (rateLimiter.acquireToken()) {
         axios.get(url)
           .then(response => resolve(response))
-          .catch(error => {
-            if (error.response && error.response.data) {
-              console.error('Etherscan API Response Error:', error.response.data);
-            } else {
-              console.error('Error making API call:', error.message);
-            }
-            reject(error);
-          });
+          .catch(error => reject(error));
       } else {
         setTimeout(attemptCall, 100); // Retry after 100ms if no tokens are available
       }
@@ -144,7 +137,6 @@ async function updateCache() {
 
     if (balanceResponse.data.status !== "1") {
       console.error(`Etherscan API Error: ${balanceResponse.data.message}`);
-      console.log('Full Response:', balanceResponse.data);
       throw new Error(`Etherscan API Error: ${balanceResponse.data.message}`);
     }
 
@@ -202,7 +194,6 @@ async function updateCache() {
           const response = await rateLimitedApiCall(balanceUrl);
           if (response.data.status !== "1") {
             console.error(`Etherscan API Error: ${response.data.message}`);
-            console.log('Full Response:', response.data);
             trumpEtherIncomeDuringTimeFrame[interval - i] = 0;
           } else {
             const balance = response.data.result;
@@ -305,7 +296,6 @@ async function fetchContractTransactionsEtherscan(fromAddress, toAddress) {
       return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
     } else {
       console.error('Etherscan API Error:', response.data.message);
-      console.log('Full Response:', response.data);
       return [];
     }
   } catch (error) {
