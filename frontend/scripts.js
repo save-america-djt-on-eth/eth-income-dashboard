@@ -63,6 +63,7 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
             categories: labels,
             gridLineColor: '#333333',
             labels: {
+                enabled: false, // Disable the x-axis labels
                 style: {
                     color: '#AAAAAA'
                 }
