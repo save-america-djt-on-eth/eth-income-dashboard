@@ -97,11 +97,11 @@ class RateLimiter {
   }
 }
 
-// Instantiate the rate limiter with a limit of 5 calls per second
-const rateLimiter = new RateLimiter(5, 1000);
+// Instantiate the rate limiter with a limit of 2 calls per second (more conservative)
+const rateLimiter = new RateLimiter(2, 1000);
 
 // Function to make a rate-limited API call with retry mechanism
-async function rateLimitedApiCall(url, retries = 3) {
+async function rateLimitedApiCall(url, retries = 5) {
   for (let i = 0; i < retries; i++) {
     if (rateLimiter.acquireToken()) {
       try {
@@ -113,11 +113,12 @@ async function rateLimitedApiCall(url, retries = 3) {
           await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** i))); // Exponential backoff
         } else {
           console.error('Error making API call:', error.message);
+          console.error('Full Error:', error.response ? error.response.data : error);
           throw error;
         }
       }
     } else {
-      await new Promise(resolve => setTimeout(resolve, 200)); // Wait for 200ms before trying again
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait for 500ms before trying again
     }
   }
   throw new Error('Max retries reached');
