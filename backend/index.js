@@ -154,7 +154,7 @@ async function updateCache() {
       for (let i = interval; i >= 0; i--) {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
-          const balanceResponse = await fetchWithRetry(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`);
+          const balanceResponse = await fetchWithRetry(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&blockno=${blockNumber}&apikey=${etherscanApiKey}`);
           await wait(200);
           if (balanceResponse.data.result) {
             const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
