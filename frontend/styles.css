@@ -74,6 +74,9 @@ h1 {
 }
 
 .footer p {
-    margin: 10px 0;
+    width: 80%;
+    margin: 20px 0;
     font-size: 0.9em;
+    padding: 10px 20px;
+    align-items: center;
 }

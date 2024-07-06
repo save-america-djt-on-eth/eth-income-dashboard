@@ -75,6 +75,27 @@ let cache = {
 let lastCacheUpdateTime = 0;
 const cacheDuration = 1800000; // 30 minutes
 
+// Function to fetch balance history with rate limiting and retry logic
+async function fetchBalanceHistory(address, blockNumber, apiKey, delay, retries = 3) {
+  await wait(delay);
+  try {
+    const response = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${address}&blockno=${blockNumber}&apikey=${apiKey}`);
+    if (response.data.status === '1') {
+      return response;
+    } else {
+      throw new Error(response.data.message);
+    }
+  } catch (error) {
+    if (retries > 0 && error.message.includes('Maximum rate limit reached')) {
+      console.warn(`Retrying... ${retries} attempts left`);
+      await wait(delay * 2); // Increase the delay for the next retry
+      return fetchBalanceHistory(address, blockNumber, apiKey, delay, retries - 1);
+    } else {
+      throw error;
+    }
+  }
+}
+
 // Function to update the cache
 async function updateCache() {
   const currentTime = Date.now();
@@ -87,23 +108,24 @@ async function updateCache() {
   // Ethereum addresses
   const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce';
   const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1';
+  const delay = 500; // 500ms delay between requests
 
   try {
     // Fetch current block number
     const blockResponse = await axios.get(`https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`);
-    await wait(200);
+    await wait(delay);
     const currentBlock = parseInt(blockResponse.data.result, 16);
 
     // Fetch current balance of Trump's address
     const currentBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&apikey=${etherscanApiKey}`);
-    await wait(200);
+    await wait(delay);
     const currentEthBalance = parseFloat(ethers.formatEther(currentBalanceResponse.data.result)).toFixed(4);
 
     // Function to fetch historical block number
     const fetchHistoricalBlock = async (daysAgo) => {
       const timestamp = Math.floor(Date.now() / 1000) - (daysAgo * 24 * 60 * 60);
       const response = await axios.get(`https://api.etherscan.io/api?module=block&action=getblocknobytime&timestamp=${timestamp}&closest=before&apikey=${etherscanApiKey}`);
-      await wait(200);
+      await wait(delay);
       return parseInt(response.data.result);
     };
 
@@ -156,8 +178,7 @@ async function updateCache() {
       // Fetch initial balance at the startBlock
       let initialBalance = 0;
       try {
-        const initialBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${startBlock}&apikey=${etherscanApiKey}`);
-        await wait(200);
+        const initialBalanceResponse = await fetchBalanceHistory(trumpAddress, startBlock, etherscanApiKey, delay);
         if (initialBalanceResponse.data.status === '1') {
           initialBalance = parseFloat(ethers.formatEther(initialBalanceResponse.data.result));
         } else {
@@ -172,8 +193,7 @@ async function updateCache() {
         const blockNumber = startBlock + (i * blocksPerInterval);
         let balanceResponse;
         try {
-          balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${blockNumber}&apikey=${etherscanApiKey}`);
-          await wait(200);
+          balanceResponse = await fetchBalanceHistory(trumpAddress, blockNumber, etherscanApiKey, delay);
           if (balanceResponse.data.status === '1') {
             const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
             if (previousBalance !== null) {
