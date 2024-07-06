@@ -30,9 +30,9 @@ function fetchData(timeFrame) {
                 return;
             }
             console.log("API Data: ", data);
-            updateChart(data.labels, data.ethAddedDuringTimeFrame, data.ethGeneratedByDJT, timeFrame);
-            document.getElementById("total-eth").innerText = Number(data.newEthHoldings).toFixed(4);
-            document.getElementById("eth-generated-djt").innerText = Number(data.newEthGeneratedDJT).toFixed(4);
+            updateChart(data.labels, data.trumpEtherIncomeDuringTimeFrame, data.etherGeneratedByDJT, timeFrame);
+            document.getElementById("total-eth").innerText = Number(data.currentEthTotal).toFixed(4);
+            document.getElementById("eth-generated-djt").innerText = Number(data.etherGeneratedByDJT).toFixed(4);
             const percentage = ((data.newEthGeneratedDJT / data.newEthHoldings) * 100).toFixed(0);
             document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
         })
