@@ -10,13 +10,6 @@ const crypto = require('crypto');
 
 const app = express();
 const port = process.env.PORT || 3000;
-const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-const infuraApiKey = process.env.INFURA_API_KEY;
-const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
-const startingEthBalance = process.env.STARTING_ETH_BALANCE || '0';
-
-console.log(`Using provider URL: ${providerUrl}`);
-const provider = new ethers.JsonRpcProvider(providerUrl);
 
 // Middleware to generate a nonce for CSP
 app.use((req, res, next) => {
@@ -61,6 +54,13 @@ app.use(express.json());
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
 
+// Use the Infura API key from .env file
+const infuraApiKey = process.env.INFURA_API_KEY;
+const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
+console.log(`Using provider URL: ${providerUrl}`);
+
+const provider = new ethers.JsonRpcProvider(providerUrl);
+
 // Ethereum addresses
 const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce'; // Trump's doxxed ETH address
 const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1'; // DJT contract address
@@ -85,9 +85,6 @@ async function updateCache() {
   lastCacheUpdateTime = currentTime;
 
   try {
-    // Fetch current balance of Trump's address
-    const currentBalance = await provider.getBalance(trumpAddress);
-    const currentEthBalance = parseFloat(ethers.formatUnits(currentBalance, 'ether')).toFixed(4);
     const currentBlock = await provider.getBlockNumber();
 
     // Define block intervals
@@ -95,7 +92,7 @@ async function updateCache() {
     const blocksPerHour = Math.round(blocksPerDay / 24);
     const blocksPer6Hours = Math.round(blocksPerDay / 4);
 
-    // Function to generate data for a specific time frame
+    // Generate data for a specific time frame
     const generateData = async (timeFrame) => {
       let days, interval, blocksPerInterval, startDate, endDate;
       let labels = [];
@@ -213,7 +210,7 @@ app.get('/api/data', (req, res) => {
       res.json(cache[timeFrame]);
     } else if (simulate && simulate === 'true') {
       const simulatedData = JSON.parse(JSON.stringify(cache[timeFrame])); // Deep clone the cache data
-      simulatedData.cumulativeEthGenerated = simulatedData.cumulativeEthGenerated.map(value => value * 1.1); // Example simulation
+      simulatedData.totalEtherFromDJT = simulatedData.totalEtherFromDJT.map(value => value * 1.1); // Example simulation
       res.json(simulatedData);
     } else {
       res.json(cache[timeFrame]);
@@ -225,6 +222,7 @@ app.get('/api/data', (req, res) => {
 
 // Fetch internal transactions from Etherscan
 async function fetchInternalTransactionsEtherscan(toAddress) {
+  const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
   try {
     const url = `https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`;
     console.log(`Fetching internal transactions from URL: ${url}`);
