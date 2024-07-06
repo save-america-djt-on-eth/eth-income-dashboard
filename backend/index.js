@@ -153,6 +153,21 @@ async function updateCache() {
       const supplyChange = [];
       let previousBalance = null;
 
+      // Fetch initial balance at the startBlock
+      let initialBalance = 0;
+      try {
+        const initialBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${startBlock}&apikey=${etherscanApiKey}`);
+        await wait(200);
+        if (initialBalanceResponse.data.status === '1') {
+          initialBalance = parseFloat(ethers.formatEther(initialBalanceResponse.data.result));
+        } else {
+          console.error(`Invalid response for initial balance at block ${startBlock}:`, initialBalanceResponse.data);
+        }
+      } catch (error) {
+        console.error(`Error fetching initial balance for block ${startBlock}: ${error.message}`);
+        console.error(`Response data: ${JSON.stringify(initialBalanceResponse ? initialBalanceResponse.data : 'No response data')}`);
+      }
+
       for (let i = 0; i <= interval; i++) {
         const blockNumber = startBlock + (i * blocksPerInterval);
         let balanceResponse;
@@ -163,6 +178,8 @@ async function updateCache() {
             const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
             if (previousBalance !== null) {
               supplyChange.push(ethBalance - previousBalance);
+            } else {
+              supplyChange.push(ethBalance - initialBalance); // Use initial balance for the first delta
             }
             previousBalance = ethBalance;
           } else {
@@ -176,9 +193,12 @@ async function updateCache() {
         }
       }
 
-      // Make supplyChange cumulative
-      for (let i = 1; i < supplyChange.length; i++) {
-        supplyChange[i] += supplyChange[i - 1];
+      // Make supplyChange cumulative starting with initialBalance
+      for (let i = 0; i < supplyChange.length; i++) {
+        supplyChange[i] += initialBalance;
+        if (i > 0) {
+          supplyChange[i] += supplyChange[i - 1];
+        }
       }
 
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
