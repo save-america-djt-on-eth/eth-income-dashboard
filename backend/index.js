@@ -129,16 +129,20 @@ async function updateCache() {
           throw new Error('Invalid time frame');
       }
 
-      // Fetch balances for the past periods
       const supplyChange = [];
+      let previousBalance = null;
+
       for (let i = interval; i >= 0; i--) {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
-          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&blockno=${blockNumber}&apikey=${etherscanApiKey}`);
+          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`);
           await wait(200);
           if (balanceResponse.data.result) {
             const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
-            supplyChange.push(ethBalance);
+            if (previousBalance !== null) {
+              supplyChange.push(previousBalance - ethBalance);
+            }
+            previousBalance = ethBalance;
           } else {
             console.error(`Invalid response for block ${blockNumber}:`, balanceResponse.data);
             supplyChange.push(0);
@@ -149,13 +153,9 @@ async function updateCache() {
         }
       }
 
-      // Fetch internal transactions
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
-
-      // Calculate cumulative ETH generated
       const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, currentBlock, blocksPerInterval, interval);
 
-      // Calculate contract balance
       const contractBalance = internalTransactions.reduce((total, tx) => {
         const value = tx.value.toString();
         const integerPart = value.slice(0, -18) || '0';
@@ -164,25 +164,22 @@ async function updateCache() {
         return total + formattedValue;
       }, 0).toFixed(4);
 
-      // Generate time labels
       const labels = timeFrame === 'custom' ? generateCustomTimeLabels(startDate, endDate, interval) : generateTimeLabels(days, interval);
 
-      // Calculate deltas for supply change and cumulative ETH generated
       const supplyDelta = calculateDeltas(supplyChange);
       const djtDelta = calculateDeltas(cumulativeEthGenerated);
 
-      // Generate random data for demonstration purposes
       const djtData = generateRandomData(labels.length);
       const nftData = generateRandomData(labels.length);
       const otherData = generateRandomData(labels.length);
 
       return {
-        labels: labels.slice(1), // Remove the first label as we now have deltas
+        labels: labels.slice(1),
         djt: djtData,
         nft: nftData,
         other: otherData,
-        supplyChange: supplyDelta, // Return the deltas
-        cumulativeEthGenerated: djtDelta, // Return the deltas
+        supplyChange: supplyDelta,
+        cumulativeEthGenerated: djtDelta,
         contractBalance,
         currentEthTotal: currentEthBalance
       };
