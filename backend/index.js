@@ -95,7 +95,7 @@ async function updateCache() {
     }
 
     const currentTrumpBalance = balanceResponse.data.result;
-    const currentEthBalance = parseFloat(ethers.formatEther(currentTrumpBalance);
+    const currentEthBalance = parseFloat(ethers.formatEther(currentTrumpBalance));
 
     // Define block intervals
     const blocksPerDay = 6500;
@@ -151,7 +151,7 @@ async function updateCache() {
             trumpEtherIncomeDuringTimeFrame[interval - i] = 0;
           } else {
             const balance = response.data.result;
-            const ethBalance = parseFloat(ethers.formatEther(balance);
+            const ethBalance = parseFloat(ethers.formatEther(balance));
             trumpEtherIncomeDuringTimeFrame[interval - i] = ethBalance;
           }
         } catch (error) {
