@@ -112,6 +112,7 @@ async function rateLimitedApiCall(url, retries = 3) {
           console.warn(`Rate limit reached, retrying... (${i + 1}/${retries})`);
           await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** i))); // Exponential backoff
         } else {
+          console.error('Error making API call:', error.message);
           throw error;
         }
       }
