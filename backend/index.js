@@ -27,7 +27,7 @@ app.use((req, res, next) => {
       styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "https://api.etherscan.io", "https://mainnet.infura.io"],
+      connectSrc: ["'self'", "https://api.etherscan.io"],
     },
   })(req, res, next);
 });
@@ -54,18 +54,12 @@ app.use(express.json());
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Use the Infura API key from .env file
-const infuraApiKey = process.env.INFURA_API_KEY;
-const providerUrl = `https://mainnet.infura.io/v3/${infuraApiKey}`;
-console.log(`Using provider URL: ${providerUrl}`);
-
-const provider = new ethers.JsonRpcProvider(providerUrl);
-
 // Ethereum addresses
 const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce'; // Trump's doxxed ETH address
 const contractAddress = '0xE68F1cb52659f256Fee05Fd088D588908A6e85A1'; // DJT contract address
 
 const startingEthBalance = parseFloat(process.env.STARTING_ETH_BALANCE || '0');
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 
 // Cache object to store data
 let cache = {
@@ -87,7 +81,7 @@ async function updateCache() {
   lastCacheUpdateTime = currentTime;
 
   try {
-    const currentBlock = await provider.getBlockNumber();
+    const currentBlock = await getCurrentBlock();
 
     // Define block intervals
     const blocksPerDay = 6500;
@@ -132,19 +126,8 @@ async function updateCache() {
       const trumpEtherIncomeDuringTimeFrame = [];
       const etherIncomeFromContract = [];
 
-      const supplyChange = [];
-      for (let i = interval; i >= 0; i--) {
-        const blockNumber = currentBlock - (i * blocksPerInterval);
-        try {
-          const balance = await provider.getBalance(trumpAddress, blockNumber);
-          const ethBalance = parseFloat(ethers.formatUnits(balance, 'ether'));
-          supplyChange.push(ethBalance);
-        } catch (error) {
-          console.error(`Error fetching balance for block ${blockNumber}:`, error);
-          supplyChange.push(0);
-        }
-      }
-
+      const supplyChange = await fetchSupplyChange(interval, blocksPerInterval, currentBlock);
+      
       // Fetch internal transactions from contract address
       const contractTransactions = await fetchContractTransactionsEtherscan(contractAddress, trumpAddress);
 
@@ -170,7 +153,7 @@ async function updateCache() {
       }, []);
 
       return {
-        labels,
+        labels: labels.reverse(), // Reverse to get chronological order
         trumpEtherIncomeDuringTimeFrame: cumulativeEthAddedDuringTimeFrame,
         etherIncomeFromContract: cumulativeEthGeneratedByDJTFinal,
         trumpTotalEther: supplyChange[supplyChange.length - 1],
@@ -218,25 +201,44 @@ app.get('/api/data', (req, res) => {
   }
 });
 
+// Fetch current block number using Etherscan API
+async function getCurrentBlock() {
+  const url = `https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`;
+  const response = await axios.get(url);
+  if (response.data.result) {
+    return parseInt(response.data.result, 16);
+  } else {
+    throw new Error('Failed to fetch current block number');
+  }
+}
+
+// Fetch balances for each interval using Etherscan API
+async function fetchSupplyChange(interval, blocksPerInterval, currentBlock) {
+  const supplyChange = [];
+  for (let i = interval; i >= 0; i--) {
+    const blockNumber = currentBlock - (i * blocksPerInterval);
+    const url = `https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`;
+    const response = await axios.get(url);
+    if (response.data.status === "1") {
+      const ethBalance = parseFloat(ethers.formatUnits(response.data.result, 'ether'));
+      supplyChange.push(ethBalance);
+    } else {
+      console.error(`Etherscan API Error: ${response.data.message}`);
+      supplyChange.push(0);
+    }
+  }
+  return supplyChange;
+}
+
 // Fetch internal transactions from Etherscan
 async function fetchContractTransactionsEtherscan(fromAddress, toAddress) {
-  const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
   try {
-    const response = await axios.get('https://api.etherscan.io/api', {
-      params: {
-        module: 'account',
-        action: 'txlistinternal',
-        address: toAddress,
-        startblock: 0,
-        endblock: 'latest',
-        sort: 'asc',
-        apikey: etherscanApiKey
-      }
-    });
+    const url = `https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`;
+    const response = await axios.get(url);
     if (response.data.status === "1") {
       return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
     } else {
-      console.error('Etherscan API Error:', response.data.message);
+      console.error(`Etherscan API Error: ${response.data.message}`);
       return [];
     }
   } catch (error) {
