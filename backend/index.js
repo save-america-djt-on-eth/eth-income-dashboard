@@ -111,7 +111,7 @@ async function updateCache() {
     const historicalBlock1d = await fetchHistoricalBlock(1);
     const historicalBlock7d = await fetchHistoricalBlock(7);
     const historicalBlock30d = await fetchHistoricalBlock(30);
-    const historicalBlockCustom = 19484850 // First block with internal transactions from DJT contract to trumpAddress
+    const historicalBlockCustom = await 19484850; // First block with internal transactions from DJT contract to trumpAddress
 
     // Function to generate data for a specific time frame
     const generateData = async (timeFrame) => {
