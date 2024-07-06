@@ -69,26 +69,6 @@ let cache = {
 let lastCacheUpdateTime = 0;
 const cacheDuration = 1800000; // 30 minutes
 
-// Function to make API calls with retries and exponential backoff
-async function fetchWithRetry(url, retries = 5, delay = 500) {
-  try {
-    const response = await axios.get(url);
-    if (response.data.status === '1') {
-      return response;
-    } else {
-      throw new Error(`Etherscan API Error: ${response.data.message}`);
-    }
-  } catch (error) {
-    if (retries > 0) {
-      console.log(`Retrying... (${retries} retries left)`);
-      await wait(delay);
-      return fetchWithRetry(url, retries - 1, delay * 2);
-    } else {
-      throw error;
-    }
-  }
-}
-
 // Function to update the cache
 async function updateCache() {
   const currentTime = Date.now();
@@ -104,12 +84,12 @@ async function updateCache() {
 
   try {
     // Fetch current block number
-    const blockResponse = await fetchWithRetry(`https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`);
+    const blockResponse = await axios.get(`https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey=${etherscanApiKey}`);
     await wait(200);
     const currentBlock = parseInt(blockResponse.data.result, 16);
 
     // Fetch current balance of Trump's address
-    const currentBalanceResponse = await fetchWithRetry(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&apikey=${etherscanApiKey}`);
+    const currentBalanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&apikey=${etherscanApiKey}`);
     await wait(200);
     const currentEthBalance = parseFloat(ethers.formatEther(currentBalanceResponse.data.result)).toFixed(4);
 
@@ -154,7 +134,7 @@ async function updateCache() {
       for (let i = interval; i >= 0; i--) {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
-          const balanceResponse = await fetchWithRetry(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&blockno=${blockNumber}&apikey=${etherscanApiKey}`);
+          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`);
           await wait(200);
           if (balanceResponse.data.result) {
             const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
@@ -255,7 +235,17 @@ app.get('/api/cache', (req, res) => {
 // Fetch internal transactions from Etherscan
 async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
   try {
-    const response = await fetchWithRetry(`https://api.etherscan.io/api?module=account&action=txlistinternal&address=${toAddress}&startblock=0&endblock=latest&sort=asc&apikey=${etherscanApiKey}`);
+    const response = await axios.get('https://api.etherscan.io/api', {
+      params: {
+        module: 'account',
+        action: 'txlistinternal',
+        address: toAddress,
+        startblock: 0,
+        endblock: 'latest',
+        sort: 'asc',
+        apikey: etherscanApiKey
+      }
+    });
     await wait(200);
     if (response.data.status === "1") {
       return response.data.result.filter(tx => tx.from.toLowerCase() === fromAddress.toLowerCase());
