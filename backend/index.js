@@ -193,12 +193,14 @@ async function updateCache() {
         }
       }
 
-      // Make supplyChange cumulative starting with initialBalance
-      for (let i = 0; i < supplyChange.length; i++) {
-        supplyChange[i] += initialBalance;
-        if (i > 0) {
-          supplyChange[i] += supplyChange[i - 1];
-        }
+      // Make supplyChange cumulative
+      for (let i = 1; i < supplyChange.length; i++) {
+        supplyChange[i] += supplyChange[i - 1];
+      }
+
+      // Adjust the first element by adding initialBalance
+      if (supplyChange.length > 0) {
+        supplyChange[0] += initialBalance;
       }
 
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
