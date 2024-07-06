@@ -124,12 +124,12 @@ async function updateCache() {
           throw new Error('Invalid time frame');
       }
 
-      // Fetch income of Trump's address
+      // Fetch balances for the past periods
       const supplyChange = [];
       for (let i = interval; i >= 0; i--) {
         const blockNumber = currentBlock - (i * blocksPerInterval);
         try {
-          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balancehistory&address=${trumpAddress}&blockno=${blockNumber}&apikey=${etherscanApiKey}`);
+          const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`);
           const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
           supplyChange.push(ethBalance);
         } catch (error) {
