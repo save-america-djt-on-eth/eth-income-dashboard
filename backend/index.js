@@ -12,6 +12,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 const providerUrl = process.env.PROVIDER_URL; // Add your provider URL to the .env file
+const startingEthBalance = process.env.STARTING_ETH_BALANCE || '0'; // Add initial balance to .env
 
 // Ethereum addresses
 const trumpAddress = '0x94845333028B1204Fbe14E1278Fd4Adde46B22ce'; // Trump's doxxed ETH address
@@ -142,7 +143,14 @@ async function updateCache() {
 
       const ethAddedDuringTimeFrame = [];
       const ethGeneratedByDJT = [];
-      const startingEthBalance = 0; // Replace with the actual starting balance if known
+
+      // Fetch balances for each interval
+      for (let i = 0; i <= interval; i++) {
+        const blockNumber = currentBlock - (i * blocksPerInterval);
+        const balance = await provider.getBalance(trumpAddress, blockNumber);
+        const ethBalance = parseFloat(ethers.formatUnits(balance, 'ether'));
+        ethAddedDuringTimeFrame.unshift(ethBalance);
+      }
 
       // Fetch internal transactions
       const internalTransactions = await fetchInternalTransactionsEtherscan(trumpAddress);
@@ -162,15 +170,15 @@ async function updateCache() {
       // Make ETH values cumulative and adjust starting point
       const cumulativeEthAddedDuringTimeFrame = ethAddedDuringTimeFrame.reduce((acc, value, index) => {
         if (index === 0) {
-          acc.push(value);
+          acc.push(parseFloat(startingEthBalance)); // Start with the initial balance
         } else {
-          acc.push(acc[index - 1] + value);
+          acc.push(acc[index - 1] + (value - ethAddedDuringTimeFrame[index - 1]));
         }
         return acc;
       }, []);
       const cumulativeEthGeneratedByDJT = ethGeneratedByDJT.reduce((acc, value, index) => {
         if (index === 0) {
-          acc.push(startingEthBalance); // Start with the actual starting balance
+          acc.push(0); // Start with 0
         } else {
           acc.push(acc[index - 1] + value);
         }
@@ -182,7 +190,7 @@ async function updateCache() {
         ethAddedDuringTimeFrame: cumulativeEthAddedDuringTimeFrame,
         ethGeneratedByDJT: cumulativeEthGeneratedByDJT,
         currentEthTotal: currentEthBalance,
-        newEthHoldings: ethAddedDuringTimeFrame,
+        newEthHoldings: cumulativeEthAddedDuringTimeFrame,
         newEthGeneratedDJT: cumulativeEthGeneratedByDJT
       };
     };
