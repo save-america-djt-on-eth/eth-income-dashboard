@@ -136,8 +136,13 @@ async function updateCache() {
         try {
           const balanceResponse = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${trumpAddress}&tag=${blockNumber}&apikey=${etherscanApiKey}`);
           await wait(200);
-          const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
-          supplyChange.push(ethBalance);
+          if (balanceResponse.data.result) {
+            const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
+            supplyChange.push(ethBalance);
+          } else {
+            console.error(`Invalid response for block ${blockNumber}:`, balanceResponse.data);
+            supplyChange.push(0);
+          }
         } catch (error) {
           console.error(`Error fetching balance for block ${blockNumber}:`, error);
           supplyChange.push(0);
