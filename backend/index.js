@@ -226,6 +226,9 @@ async function updateCache() {
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
       const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, startBlock, blocksPerInterval, interval);
 
+      // Calculate the 10x simulated cumulative ETH generated
+      const cumulativeEthGenerated10x = cumulativeEthGenerated.map(value => value * 10);
+
       const contractBalance = internalTransactions.reduce((total, tx) => {
         const value = tx.value.toString();
         const integerPart = value.slice(0, -18) || '0';
@@ -242,6 +245,7 @@ async function updateCache() {
       return {
         labels: labels.slice(1),
         djt: djtDelta,
+        djt10x: cumulativeEthGenerated10x.slice(1), // 10x simulated data
         nft: generateRandomData(labels.length - 1),
         other: generateRandomData(labels.length - 1),
         supplyChange: supplyDelta,
