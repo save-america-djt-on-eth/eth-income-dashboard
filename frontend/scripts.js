@@ -211,6 +211,7 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
                 lineColor: '#A6C7ED'
             },
             xAxis: {
+                enabled: false,
                 gridLineColor: '#505053'
             }
         },
