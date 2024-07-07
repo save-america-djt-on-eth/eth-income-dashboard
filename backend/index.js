@@ -226,6 +226,11 @@ async function updateCache() {
       const internalTransactions = await fetchInternalTransactionsEtherscan(contractAddress, trumpAddress);
       const cumulativeEthGenerated = calculateCumulativeEthGenerated(internalTransactions, supplyChange.length, startBlock, blocksPerInterval, interval);
 
+      // Make cumulativeEthGenerated cumulative
+      for (let i = 1; i < cumulativeEthGenerated.length; i++) {
+        cumulativeEthGenerated[i] += cumulativeEthGenerated[i - 1];
+      }
+
       // Calculate the 10x simulated cumulative ETH generated
       const cumulativeEthGenerated10x = cumulativeEthGenerated.map(value => value * 10);
 
