@@ -30,7 +30,7 @@ function fetchData(timeFrame) {
                 return;
             }
             console.log("API Data: ", data);
-            updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, timeFrame);
+            updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, data.djt10x, timeFrame);
             document.getElementById("total-eth").innerText = Number(data.currentEthTotal).toFixed(4);
             document.getElementById("eth-generated-djt").innerText = Number(data.contractBalance).toFixed(4);
             const percentage = ((data.contractBalance / data.currentEthTotal) * 100).toFixed(0);
@@ -39,7 +39,7 @@ function fetchData(timeFrame) {
         .catch(error => console.error("Error fetching data: ", error));
 }
 
-function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromContract, timeFrame) {
+function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromContract, etherIncomeFromContract10x, timeFrame) {
     const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
 
     Highcharts.chart('myChart', {
@@ -63,7 +63,6 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
             categories: labels,
             gridLineColor: '#333333',
             labels: {
-                enabled: false, // Disable the x-axis labels
                 style: {
                     color: '#AAAAAA'
                 }
@@ -134,6 +133,10 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
             name: '$DJT Generated ETH Income',
             data: etherIncomeFromContract,
             color: '#F15A24'
+        }, {
+            name: 'Simulated 10x $DJT Generated ETH Income',
+            data: etherIncomeFromContract10x,
+            color: '#00FF00'
         }],
         legend: {
             itemStyle: {
