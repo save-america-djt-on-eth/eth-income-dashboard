@@ -193,7 +193,7 @@ async function updateCache() {
         const blockNumber = startBlock + (i * blocksPerInterval);
         let balanceResponse;
         try {
-          balanceResponse = await fetchBalanceHistory(trumpAddress, blockNumber, etherscanApiKey, delay);
+          balanceResponse = await fetchBalanceHistory(trumpAddress, blockNumber + 1, etherscanApiKey, delay); // Fetch one block ahead
           if (balanceResponse.data.status === '1') {
             const ethBalance = parseFloat(ethers.formatEther(balanceResponse.data.result));
             if (previousBalance !== null) {
