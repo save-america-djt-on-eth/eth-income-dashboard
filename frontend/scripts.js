@@ -1,45 +1,4 @@
-document.addEventListener("DOMContentLoaded", function () {
-    fetchData('7d'); // Default time frame
-
-    // Add event listeners to buttons
-    document.getElementById('btn-1d').addEventListener('click', () => fetchData('1d'));
-    document.getElementById('btn-7d').addEventListener('click', () => fetchData('7d'));
-    document.getElementById('btn-30d').addEventListener('click', () => fetchData('30d'));
-    document.getElementById('btn-custom').addEventListener('click', () => fetchData('custom'));
-});
-
-function fetchData(timeFrame) {
-    const buttons = document.querySelectorAll("#time-frame-buttons button");
-    buttons.forEach(button => button.classList.remove("active"));
-
-    const activeButton = Array.from(buttons).find(button => button.textContent.toLowerCase() === timeFrame.toLowerCase() || button.innerHTML.includes("greyscale-djt.ico"));
-    if (activeButton) {
-        activeButton.classList.add("active");
-    }
-
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    const port = window.location.port ? `:${window.location.port}` : '';
-    const apiUrl = `${protocol}//${hostname}${port}/api/data?timeFrame=${timeFrame}&simulate=false`;
-
-    fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                console.error(`API Data: ${data.error}`);
-                return;
-            }
-            console.log("API Data: ", data);
-            updateChart(data.labels, data.supplyChange, data.cumulativeEthGenerated, data.djt10x, timeFrame);
-            document.getElementById("total-eth").innerText = Number(data.currentEthTotal).toFixed(4);
-            document.getElementById("eth-generated-djt").innerText = Number(data.contractBalance).toFixed(4);
-            const percentage = ((data.contractBalance / data.currentEthTotal) * 100).toFixed(0);
-            document.getElementById("eth-percentage-value").innerText = `${percentage}%`;
-        })
-        .catch(error => console.error("Error fetching data: ", error));
-}
-
-function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromContract, etherIncomeFromContract10x, timeFrame) {
+function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromContract, timeFrame) {
     const titleText = timeFrame === 'custom' ? 'Since $DJT Launch' : '';
 
     Highcharts.chart('myChart', {
@@ -63,10 +22,7 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
             categories: labels,
             gridLineColor: '#333333',
             labels: {
-                style: {
-                    enabled: false, // Disable the x-axis labels
-                    color: '#AAAAAA'
-                }
+                enabled: false // Disable the x-axis labels
             },
             lineColor: '#707073',
             minorGridLineColor: '#505053',
@@ -134,10 +90,6 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
             name: '$DJT Generated ETH Income',
             data: etherIncomeFromContract,
             color: '#F15A24'
-        }, {
-            name: 'Simulated 10x $DJT Generated ETH Income',
-            data: etherIncomeFromContract10x,
-            color: '#00FF00'
         }],
         legend: {
             itemStyle: {
@@ -211,7 +163,6 @@ function updateChart(labels, trumpEtherIncomeDuringTimeFrame, etherIncomeFromCon
                 lineColor: '#A6C7ED'
             },
             xAxis: {
-                enabled: false,
                 gridLineColor: '#505053'
             }
         },
