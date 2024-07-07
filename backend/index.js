@@ -331,24 +331,28 @@ async function fetchInternalTransactionsEtherscan(fromAddress, toAddress) {
   }
 }
 
-// Calculate cumulative ETH generated from transactions
+// Calculate cumulative ETH generated from transactions, starting from 0
 function calculateCumulativeEthGenerated(transactions, length, startBlock, blocksPerInterval, interval) {
-  const cumulativeEthGenerated = new Array(length).fill(0);
-  transactions.forEach(tx => {
-    const value = tx.value.toString();
-    const integerPart = value.slice(0, -18) || '0';
-    const decimalPart = value.slice(-18).padStart(18, '0');
-    const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
-    const blockNumber = parseInt(tx.blockNumber);
+    const cumulativeEthGenerated = new Array(length).fill(0);
+    let previousBalance = 0;
 
-    for (let i = 0; i < length; i++) {
-      const blockThreshold = startBlock + (i * blocksPerInterval);
-      if (blockNumber <= blockThreshold) {
-        cumulativeEthGenerated[i] += ethValue;
-      }
-    }
-  });
-  return cumulativeEthGenerated;
+    transactions.forEach(tx => {
+        const value = tx.value.toString();
+        const integerPart = value.slice(0, -18) || '0';
+        const decimalPart = value.slice(-18).padStart(18, '0');
+        const ethValue = parseFloat(`${integerPart}.${decimalPart}`);
+        const blockNumber = parseInt(tx.blockNumber);
+
+        for (let i = 0; i < length; i++) {
+            const blockThreshold = startBlock + (i * blocksPerInterval);
+            if (blockNumber <= blockThreshold) {
+                cumulativeEthGenerated[i] = previousBalance + ethValue;
+            }
+        }
+        previousBalance += ethValue;
+    });
+
+    return cumulativeEthGenerated;
 }
 
 // Generate time labels based on days and interval
