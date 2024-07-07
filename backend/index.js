@@ -230,6 +230,10 @@ async function updateCache() {
       for (let i = 1; i < cumulativeEthGenerated.length; i++) {
         cumulativeEthGenerated[i] += cumulativeEthGenerated[i - 1];
       }
+            // Adjust the first element by adding initialBalance
+      if (cumulativeEthGenerated.length > 0) {
+        cumulativeEthGenerated[0] += initialBalance;
+      }
 
       // Calculate the 10x simulated cumulative ETH generated
       const cumulativeEthGenerated10x = cumulativeEthGenerated.map(value => value * 10);
